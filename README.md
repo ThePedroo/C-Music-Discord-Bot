@@ -25,7 +25,9 @@ The bot use sqlite3 for save the channelId that the user is in it, so you will n
 apt install sqlite3
 ```
 
-6 - If you did everything correct, use:
+6 - **Replace the Orca "discord-gateway.c" file with the one in this repository for make the bot really works, not replacing it can cause "Session is no longer valid".**
+
+7 - If you did everything correct, use:
 ```bash
 clang main.c -o main.out -Wall -Wextra -Werror -g -pthread -ldiscord -lcurl -lcrypto -lpthread -lm -lsqlite3 && ./main.out
 ```
@@ -34,7 +36,7 @@ or
 gcc main.c -o main.out -Wall -Wextra -Werror -g -pthread -ldiscord -lcurl -lcrypto -lpthread -lm -lsqlite3 && ./main.out
 ```
 
-7 - The bot is probably online, use !play <music> and feel free to listen to your favorite musics.
+8 - The bot is probably online, use !play <music> and feel free to listen to your favorite musics.
   
 # Information
  

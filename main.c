@@ -196,9 +196,9 @@ void on_message(
         cJSON *trackFromTracks = cJSON_GetObjectItemCaseSensitive(cJSON_GetArrayItem(tracks, 0), "track");
 
         pthread_mutex_lock(&global_lock);
+          if(0 != strcmp(track, "null")) send_play_payload = true;
           snprintf(track, sizeof(track), "%s", trackFromTracks->valuestring);
           voice_server_guild_id = msg->guild_id;
-          if(0 != strcmp(track, "null")) send_play_payload = true;
         pthread_mutex_unlock(&global_lock);
        
         ua_info_cleanup(&info);

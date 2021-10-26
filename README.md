@@ -18,6 +18,13 @@ It's easy to use and install.
 
 5 - info - Doesn't have a [Lavalink](https://github.com/freyacodes/Lavalink) node? Setup it on [replit.com](https://replit.com/).
   
+## Before we continue...
+
+The bot use sqlite3 for save the channelId that the user is in it, so you will need to install sqlite3 with:
+```bash
+apt install sqlite3
+```
+
 6 - If you did everything correct, use:
 ```bash
 clang main.c -o main.out -Wall -Wextra -Werror -g -pthread -ldiscord -lcurl -lcrypto -lpthread -lm -lsqlite3 && ./main.out

@@ -106,7 +106,7 @@ void on_voice_server_update(
     (void) client; (void) bot;(void) token; (void) endpoint;
     pthread_mutex_lock(&global_lock);
       voice_server_guild_id = guild_id;
-      sprintf(all_event, "{\"token\":\"%s\",\"guild_id\":\"%"PRIu64"\",\"endpoint\": \"%s\"}", token, guild_id, endpoint);
+      snprintf(all_event, sizeof(all_event), "{\"token\":\"%s\",\"guild_id\":\"%"PRIu64"\",\"endpoint\": \"%s\"}", token, guild_id, endpoint);
       send_voice_server_payload = true;
     
       if (0 != strcmp(track, "null")) send_play_payload = true;
@@ -191,7 +191,7 @@ void on_message(
         cJSON *trackFromTracks = cJSON_GetObjectItemCaseSensitive(cJSON_GetArrayItem(tracks, 0), "track");
 
         pthread_mutex_lock(&global_lock);
-          sprintf(track, "%s", trackFromTracks->valuestring);
+          snprintf(track, sizeof(track), "%s", trackFromTracks->valuestring);
           voice_server_guild_id = msg->guild_id;
         pthread_mutex_unlock(&global_lock);
        
@@ -240,7 +240,7 @@ void *lavalink(void *id) {
     pthread_mutex_lock(&global_lock);
     if (send_voice_server_payload == true && voice_server_guild_id && 0 != strcmp(session_id, "null") && 0 != strcmp(all_event, "NULL")) {
       char payloadJson[1024];
-      sprintf(payloadJson, "{\"op\":\"voiceUpdate\",\"guildId\":\"%"PRIu64"\",\"sessionId\":\"%s\",\"event\":%s}", voice_server_guild_id, session_id, all_event);
+      snprintf(payloadJson, sizeof(payloadJson), "{\"op\":\"voiceUpdate\",\"guildId\":\"%"PRIu64"\",\"sessionId\":\"%s\",\"event\":%s}", voice_server_guild_id, session_id, all_event);
       ws_send_text(ws, NULL, payloadJson, strlen(payloadJson));
       printf("\n\n%s\n\n", payloadJson);
       session_id[0] = '\0';
@@ -250,7 +250,7 @@ void *lavalink(void *id) {
 
     if (send_play_payload == true && voice_server_guild_id && 0 != strcmp(track, "null")) {
       char payloadJson[1024];
-      sprintf(payloadJson, "{\"op\":\"play\",\"guildId\":\"%"PRIu64"\",\"track\":\"%s\",\"noReplace\":\"false\",\"pause\":\"false\"}", voice_server_guild_id, track);
+      sprintf(payloadJson, sizeof(payloadJson), "{\"op\":\"play\",\"guildId\":\"%"PRIu64"\",\"track\":\"%s\",\"noReplace\":\"false\",\"pause\":\"false\"}", voice_server_guild_id, track);
       ws_send_text(ws, NULL, payloadJson, strlen(payloadJson));
       printf("\n\n%s\n\n", payloadJson);
       track[0] = '\0';

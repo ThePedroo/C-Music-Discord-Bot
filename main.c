@@ -162,8 +162,8 @@ void on_message(
         
         char url[64];
         char pass[64];
-        snprintf(url, sizeof(url), "https://%s", lavalinkNodeUrl);
-        snprintf(pass, sizeof(pass), "%s", lavalinkNodePassword);
+        sprintf(url, "https://%s", lavalinkNodeUrl);
+        sprintf(pass, "%s", lavalinkNodePassword);
         
         ua_set_url(ua, url);
         ua_reqheader_add(ua, "Authorization", pass);

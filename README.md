@@ -33,7 +33,7 @@ gcc main.c -o main.out -Wall -Wextra -Werror -g -pthread -ldiscord -lcurl -lcryp
  
  Project owner Discord tag: `Pedro.js#9446`
 
- Orca owner: `müller#1001` / `Icon from asterranaut (Solancia)#4228` / `segfault#8223`
+ Orca owners: `müller#1001` / `Icon from asterranaut (Solancia)#4228` / `segfault#8223`
 
  Orca support server: [Click here](https://discord.gg/9cHUyCc7rs)
   

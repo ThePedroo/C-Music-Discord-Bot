@@ -39,6 +39,11 @@ void curl_easy_setopt_cb(CURL *ehandle, void *data) {
 
 void on_text(void *data, struct websockets *ws, struct ws_info *info, const char *text, size_t len) {
   (void)data; (void)info; (void)ws; (void)text; (void)len;
+  cJSON *payload = cJSON_ParseWithLength(text, len); 
+  cJSON *payloadOp = cJSON_GetObjectItemCaseSensitive(payload, "op");
+  if(0 == strcmp(payloadOp->valuestring, "TrackEndEvent")) {
+    track[0] = '\0';
+  }
   printf("\n%s\n\n", text);
 }
 
@@ -193,6 +198,7 @@ void on_message(
         pthread_mutex_lock(&global_lock);
           snprintf(track, sizeof(track), "%s", trackFromTracks->valuestring);
           voice_server_guild_id = msg->guild_id;
+          if(0 != strcmp(track, "null")) send_play_payload = true;
         pthread_mutex_unlock(&global_lock);
        
         ua_info_cleanup(&info);

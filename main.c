@@ -234,8 +234,8 @@ void *lavalink(void *id) {
   
   bool is_running = false;
   while (1) {
-    ws_perform(ws, &is_running, 1);
-    if(!is_running) return NULL;
+    ws_perform(ws, &is_running, 5);
+    if(!is_running) break;
 
     pthread_mutex_lock(&global_lock);
     if (send_voice_server_payload == true && voice_server_guild_id && 0 != strcmp(session_id, "null") && 0 != strcmp(all_event, "NULL")) {

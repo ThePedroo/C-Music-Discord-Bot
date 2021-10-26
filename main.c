@@ -59,7 +59,7 @@ void on_close(
   const char *reason, 
   size_t len) {
     (void)data; (void) ws; (void) info; (void)len;
-    log_info("[LAVALINK] Error in the lavalink connection\N%d: '%s'", wscode, reason);
+    log_info("[LAVALINK] Error in the lavalink connection\n%d: '%s'", wscode, reason);
   }
 
 void on_ready(

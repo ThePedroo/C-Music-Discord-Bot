@@ -232,7 +232,7 @@ void *lavalink(void *id) {
   ws_reqheader_add(ws, "User-Id", botId);
   ws_reqheader_add(ws, "Client-Name", "MusicBotWithOrca");
   
-  bool is_running = true;
+  bool is_running = false;
   while (1) {
     ws_perform(ws, &is_running, 1);
     if(!is_running) return NULL;

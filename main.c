@@ -250,7 +250,7 @@ void *lavalink(void *id) {
 
     if (send_play_payload == true && voice_server_guild_id && 0 != strcmp(track, "null")) {
       char payloadJson[1024];
-      sprintf(payloadJson, sizeof(payloadJson), "{\"op\":\"play\",\"guildId\":\"%"PRIu64"\",\"track\":\"%s\",\"noReplace\":\"false\",\"pause\":\"false\"}", voice_server_guild_id, track);
+      snprintf(payloadJson, sizeof(payloadJson), "{\"op\":\"play\",\"guildId\":\"%"PRIu64"\",\"track\":\"%s\",\"noReplace\":\"false\",\"pause\":\"false\"}", voice_server_guild_id, track);
       ws_send_text(ws, NULL, payloadJson, strlen(payloadJson));
       printf("\n\n%s\n\n", payloadJson);
       track[0] = '\0';

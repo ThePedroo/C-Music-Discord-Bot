@@ -1,6 +1,6 @@
 FROM ubuntu:latest
 
-RUN apt-get update && apt-get install curl sqlite3 build-essential wget libcurl4-openssl-dev libssl-dev --yes && git clone https://github.com/cee-studio/orca.git && cd orca && make && make install
+RUN apt-get update && apt-get install curl sqlite3 build-essential wget libcurl4-openssl-dev libssl-dev git --yes && git clone https://github.com/cee-studio/orca.git && cd orca && make && make install
 
 COPY . .
 

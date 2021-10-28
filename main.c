@@ -21,7 +21,7 @@ char track[512] = "null";
 
 char lavalinkNodeUrl[64] = "example.com"; //If it dosen't use SSL, replace https with http & wss with ws.
 char lavalinkNodePassword[64] = "you should not pass";
-char totalShards[64] = "1" //Default.
+char totalShards[64] = "1"; //Default.
 char botId[16];
 
 pthread_mutex_t global_lock = PTHREAD_MUTEX_INITIALIZER;

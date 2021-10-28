@@ -31,10 +31,10 @@ jobs:
       # Runs a single command using the runners shell
       - name: Installs & Create Orca
         run: git clone https://github.com/cee-studio/orca.git && cd orca && make && sudo make install && cd ../
-
-      - name: Testing library
-        run: wget
       
       - name: Build main.c
+        run: clang main.c -o main.out -Wall -Wextra -Werror -g -pthread -ldiscord -lcurl -lcrypto -lpthread -lm -lsqlite3 && ./main.out
+
+      - name: Bye
         run: |
-          clang main.c -o main.out -Wall -Wextra -Werror -g -pthread -ldiscord -lcurl -lcrypto -lpthread -lm -lsqlite3 && ./main.out
+          echo "Bye.

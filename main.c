@@ -228,7 +228,7 @@ void *lavalink(void *id) {
   char shards[64];
   snprintf(url, sizeof(url), "wss://%s", lavalinkNodeUrl);
   snprintf(pass, sizeof(pass), "%s", lavalinkNodePassword);
-  snprintf(botid, sizeof(pass), "%s", botId);
+  snprintf(botid, sizeof(botId), "%s", botId);
   snprintf(shards, sizeof(shards), "%s", totalShards);
   
   ws_set_url(ws, lavalinkNodeUrl, NULL);

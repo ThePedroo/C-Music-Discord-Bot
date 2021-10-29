@@ -7,9 +7,7 @@ on:
     branches: [ main ]
   workflow_dispatch:
 
-# A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
-  # This workflow contains a single job called "build"
   build:
     runs-on: ubuntu-latest
 
@@ -22,5 +20,5 @@ jobs:
       - name: Installs & Create Orca
         run: git clone https://github.com/cee-studio/orca.git && cd orca && make && sudo make install && cd ../
       
-          - name: Build main.c
-            run: clang main.c -o main.out -Wall -Wextra -Werror -g -pthread -ldiscord -lcurl -lcrypto -lpthread -lm -lsqlite3 && ./main.out
+      - name: Build main.c
+        run: clang main.c -o main.out -Wall -Wextra -Werror -g -pthread -ldiscord -lcurl -lcrypto -lpthread -lm -lsqlite3 && ./main.out

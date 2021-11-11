@@ -19,6 +19,9 @@ jobs:
       
       - name: Downloads Orca
         run: git clone https://github.com/cee-studio/orca.git
+        
+      - name: Move files
+        run: mv websockets.c orca/common/ && mv discord-gateway.c orca/
       
       - name: Builds Orca
         run: cd orca && make && sudo make install & cd ..

@@ -24,10 +24,7 @@ jobs:
         run: mv websockets.c orca/common/ && mv discord-gateway.c orca/
       
       - name: Builds Orca
-        run: cd orca && make && sudo make install & cd ..
-        
-      - name: ls command
-        run: ls
+        run: make orca && make install orca
       
       - name: Build main.c
         run: clang main.c -o main.out -Wall -Wextra -Werror -g -pthread -ldiscord -lcurl -lcrypto -lpthread -lm -lsqlite3 && ./main.out

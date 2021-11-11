@@ -30,4 +30,4 @@ jobs:
         run: ls
       
       - name: Build main.c
-        run: clang main.c -o main.out -Wall -Wextra -Werror -g -pthread -Lorca/lib -ldiscord -lcurl -lcrypto -lpthread -lm -lsqlite3 && ./main.out
+        run: clang main.c -o main.out -Wall -Wextra -Werror -g -pthread -Lorca -ldiscord -lcurl -lcrypto -lpthread -lm -lsqlite3 && ./main.out

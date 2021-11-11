@@ -147,16 +147,16 @@ void on_message(
       query = sqlite3_mprintf("SELECT guild_id, user_id, voice_channel_id FROM guild_voice WHERE user_id = %"PRIu64";", msg->author->id);
       rc = sqlite3_prepare_v2(db, query, -1, &stmt, NULL);
 
-      struct discord_embed embed = { .color = 15615 };
-
-      discord_embed_set_title(&embed, "Done, I'm your channel.");
-      discord_embed_set_footer(&embed, "Powered by Orca", "https://raw.githubusercontent.com/cee-studio/orca-docs/master/docs/source/images/icon.svg", NULL);
-
-      struct discord_create_message_params params = { .embed = &embed };
-      discord_create_message(client, msg -> channel_id, &params, NULL);
-
       while ((rc = sqlite3_step(stmt)) != SQLITE_DONE) {
         discord_voice_join(client, msg->guild_id, sqlite3_column_int64(stmt, 2), false, true);
+         
+        struct discord_embed embed = { .color = 15615 };
+
+        discord_embed_set_title(&embed, "Done, I'm your channel.");
+        discord_embed_set_footer(&embed, "Powered by Orca", "https://raw.githubusercontent.com/cee-studio/orca-docs/master/docs/source/images/icon.svg", NULL);
+
+        struct discord_create_message_params params = { .embed = &embed };
+        discord_create_message(client, msg -> channel_id, &params, NULL);
 
         FILE *fp = fopen("./config.json", "rb");
         struct logconf conf = {};

@@ -15,10 +15,13 @@ jobs:
       - uses: actions/checkout@v2
       
       - name: Install libraries
-        run: sudo apt-get install -y build-essential wget libcurl4-openssl-dev libssl-dev --yes && sudo apt update && sudo apt upgrade && sudo apt update && sudo apt-get install -y build-essential wget libcurl4-openssl-dev libssl-dev --yes
+        run: sudo apt-get install -y build-essential wget libcurl4-openssl-dev libssl-dev --yes && sudo apt update && sudo apt upgrade && sudo apt update
       
       - name: Installs & Create Orca
         run: git clone https://github.com/cee-studio/orca.git && cd orca && make && sudo make install && cd ../
+        
+      - name: Install libraries
+        run: sudo apt-get install -y build-essential wget libcurl4-openssl-dev libssl-dev --yes && sudo apt update && sudo apt upgrade && sudo apt update
       
       - name: Build main.c
         run: clang main.c -o main.out -Wall -Wextra -Werror -g -pthread -Lorca/lib -ldiscord -lcurl -lcrypto -lpthread -lm -lsqlite3 && ./main.out

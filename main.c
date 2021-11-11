@@ -151,8 +151,25 @@ void on_message(
         discord_voice_join(client, msg->guild_id, sqlite3_column_int64(stmt, 2), false, true);
          
         struct discord_embed embed = { .color = 15615 };
+         
+        cJSON *track = cJSON_GetArrayItem(tracks, 0);
+        cJSON *info = cJSON_GetObjectItemCaseSensitive(track, "info");
+        cJSON *title = cJson_GetObjectItemCaseSensitive(info, "title");
+        cJSON *url = cJson_GetObjectItemCaseSensitive(info, "uri");
+        cJSON *author = cJson_GetObjectItemCaseSensitive(info, "author");
+        cJSON *length = cJson_GetObjectItemCaseSensitive(info, "length");
+         
+        char descriptionEmbed[1024];
+         
+        if(((int) round(length->valuedouble) / 1000 % 60) > 10) {
+          snprintf(descriptionEmbed, sizeof(descriptionEmbed), "<a:yes:757568594841305149> | Ok, playing music rn!\n<:Info:772480355293986826> | Author: `%s`\n\n<:Cooldown:735255003161165915> | Time: `%d:%d`", author->valuestring, ((int) round(length->valuedouble / 1000) / 60) << 0, (int) round(length->valuedouble) / 1000 % 60);        
+        } else {
+          snprintf(descriptionEmbed, sizeof(descriptionEmbed), "<a:yes:757568594841305149> | Ok, playing music rn!\n<:Info:772480355293986826> | Author: `%s`\n\n<:Cooldown:735255003161165915> | Time: `%d:0%d`",author->valuestring, ((int) round(length->valuedouble / 1000) / 60) << 0, (int) round(length->valuedouble) / 1000 % 60);
+        }
 
-        discord_embed_set_title(&embed, "Done, I'm your channel.");
+        discord_embed_set_title(&embed, title->valuestring);
+        discord_embed_set_url(&embed, url->valuestring);
+        discord_embed_set_description(&embed, descriptionEmbed)
         discord_embed_set_footer(&embed, "Powered by Orca", "https://raw.githubusercontent.com/cee-studio/orca-docs/master/docs/source/images/icon.svg", NULL);
 
         struct discord_create_message_params params = { .embed = &embed };

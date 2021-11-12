@@ -82,11 +82,11 @@ void on_voice_state_update(
     sqlite3 *db = NULL;
     char *query = NULL, *errMsg = NULL;
     int rc = sqlite3_open("database.db", &db);
-  
+
     pthread_mutex_lock(&global_lock);
       if(voice_state->member->user->id == bot->id) snprintf(session_id, sizeof(session_id), "%s", voice_state->session_id);
     pthread_mutex_unlock(&global_lock);
-  
+
     query = sqlite3_mprintf("CREATE TABLE IF NOT EXISTS guild_voice(guild_id INT, USER_ID INT, voice_channel_id INT);");
     rc = sqlite3_exec(db, query, NULL, NULL, &errMsg);
 
@@ -158,13 +158,12 @@ void on_message(
         cJSON *url = cJson_GetObjectItemCaseSensitive(info, "uri");
         cJSON *author = cJson_GetObjectItemCaseSensitive(info, "author");
         cJSON *length = cJson_GetObjectItemCaseSensitive(info, "length");
-         
         char descriptionEmbed[1024];
-         
+
         if(((int) round(length->valuedouble) / 1000 % 60) > 10) {
-          snprintf(descriptionEmbed, sizeof(descriptionEmbed), "<a:yes:757568594841305149> | Ok, playing music rn!\n<:Info:772480355293986826> | Author: `%s`\n\n<:Cooldown:735255003161165915> | Time: `%d:%d`", author->valuestring, ((int) round(length->valuedouble / 1000) / 60) << 0, (int) round(length->valuedouble) / 1000 % 60);        
+          snprintf(descriptionEmbed, sizeof(descriptionEmbed), "<a:yes:757568594841305149> | Ok, playing music rn!\n<:Info:772480355293986826> | Author: `%s`\n\n<:Cooldown:735255003161165915> | Time: `%d:%d`", author->valuestring, ((int) round(length->valuedouble / 1000) / 60) << 0, (int) round(length->valuedouble) / 1000 % 60);
         } else {
-          snprintf(descriptionEmbed, sizeof(descriptionEmbed), "<a:yes:757568594841305149> | Ok, playing music rn!\n<:Info:772480355293986826> | Author: `%s`\n\n<:Cooldown:735255003161165915> | Time: `%d:0%d`",author->valuestring, ((int) round(length->valuedouble / 1000) / 60) << 0, (int) round(length->valuedouble) / 1000 % 60);
+          snprintf(descriptionEmbed, sizeof(descriptionEmbed), "<a:yes:757568594841305149> | Ok, playing music rn!\n<:Info:772480355293986826> | Author: `%s`\n\n<:Cooldown:735255003161165915> | Time: `%d:0%d`", author->valuestring, ((int) round(length->valuedouble / 1000) / 60) << 0, (int) round(length->valuedouble) / 1000 % 60);
         }
 
         discord_embed_set_title(&embed, title->valuestring);
@@ -180,12 +179,12 @@ void on_message(
         logconf_setup(&conf, "USER_AGENT", fp);
 
         struct user_agent *ua = ua_init(&conf);
-        
+
         char url[64];
         char pass[64];
         sprintf(url, "https://%s", lavalinkNodeUrl);
         sprintf(pass, "%s", lavalinkNodePassword);
-        
+
         ua_set_url(ua, url);
         ua_reqheader_add(ua, "Authorization", pass);
         ua_reqheader_add(ua, "Client-Name", "MusicBotWithOrca");
@@ -202,7 +201,7 @@ void on_message(
         for(unsigned long i = 0; i < strlen(endpoint); i++){  
           if(endpoint[i] == ' ') endpoint[i] = '+';  
         }
-        
+
         ua_run(ua, &info, NULL, NULL, HTTP_GET, endpoint);
 
         struct sized_buffer body = ua_info_get_body(&info);
@@ -216,7 +215,7 @@ void on_message(
           snprintf(track, sizeof(track), "%s", trackFromTracks->valuestring);
           voice_server_guild_id = msg->guild_id;
         pthread_mutex_unlock(&global_lock);
-       
+
         ua_info_cleanup(&info);
         ua_cleanup(ua);
         cJSON_Delete(payload);

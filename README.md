@@ -8,7 +8,7 @@ It's easy to use and install.
 
 1 - Use git clone https://github.com/ThePedroo/C-Music-Discord-Bot.git
 
-2 - Install and build [Orca](https://github.com/cee-studio/orca).
+2 - Install and build [Orca](https://github.com/cee-studio/orca) and [cJSON](https://github.com/DaveGamble/cJSON) too.
 
 3 - Install clang / GCC.
 
@@ -24,8 +24,6 @@ The bot use sqlite3 for save the channelId that the user is in it, so you will n
 ```bash
 apt install sqlite3
 ```
-
-6 - **Replace the Orca "discord-gateway.c" file with the one in this repository for make the bot really works, not replacing it can cause "Session is no longer valid".**
 
 7 - If you did everything correct, use:
 ```bash

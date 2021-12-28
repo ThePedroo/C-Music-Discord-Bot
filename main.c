@@ -1,40 +1,33 @@
 #include <string.h>
 #include <stdio.h>
-#include <pthread.h>
+#include <math.h>
 
 #include <curl/curl.h>
-#include <orca/cJSON.h>
+#include <cJSON.h>
 
 #include <orca/discord.h>
 #include <orca/discord-internal.h>
 #include <orca/websockets.h>
+#include <orca/json-actor.h>
 
 #include <sqlite3.h>
 
 bool send_voice_server_payload = false;
 u64_snowflake_t voice_server_guild_id = 0;
 char session_id[64];
-char all_event[110] = "NULL";
+char all_event[1512] = "NULL";
 
 bool send_play_payload = false;
-char track[512] = "null";
+char g_track[512] = "null";
 
 char lavalinkNodeUrl[64] = "example.com"; //If it dosen't use SSL, replace https with http & wss with ws.
-char lavalinkNodePassword[64] = "you should not pass";
+char lavalinkNodePassword[64] = "youshallnotpass";
 char totalShards[64] = "1"; //Default.
-char botId[16] = "BOT_ID_HERE";
-
-pthread_mutex_t global_lock = PTHREAD_MUTEX_INITIALIZER;
+char botId[18] = "BOT_ID_HERE";
 
 int StartsWith(const char *a, const char *b) {
    if(strncmp(a, b, strlen(b)) == 0) return 1;
    return 0;
-}
-
-
-void curl_easy_setopt_cb(CURL *ehandle, void *data) {
-  (void)data;
-  curl_easy_setopt(ehandle, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
 }
 
 void on_text(void *data, struct websockets *ws, struct ws_info *info, const char *text, size_t len) {
@@ -42,9 +35,17 @@ void on_text(void *data, struct websockets *ws, struct ws_info *info, const char
   cJSON *payload = cJSON_ParseWithLength(text, len); 
   cJSON *payloadOp = cJSON_GetObjectItemCaseSensitive(payload, "op");
   if(0 == strcmp(payloadOp->valuestring, "TrackEndEvent")) {
-    track[0] = '\0';
+    g_track[0] = '\0';
   }
   printf("\n%s\n\n", text);
+}
+
+void default_config(struct ua_conn *conn, void *data) {
+  (void) data; 
+  char pass[64];
+  snprintf(pass, sizeof(pass), "%s", lavalinkNodePassword);
+  ua_conn_add_header(conn, "Authorization", pass);
+  ua_conn_add_header(conn, "Client-Name", "MusicBotWithOrca");
 }
 
 void on_connect(
@@ -53,7 +54,7 @@ void on_connect(
   struct ws_info *info, 
   const char *protocols) {
   (void)data; (void)ws; (void)info; (void)protocols;
-  log_info("[LAVALINK] Lavalink connected with sucess.");
+  log_info("[LAVALINK] Lavalink connected with success.");
 }
 
 void on_close(
@@ -68,232 +69,251 @@ void on_close(
   }
 
 void on_ready(
-  struct discord *client, 
-  const struct discord_user *bot) {
+  struct discord *client) {
   (void) client;
+  const struct discord_user *bot = discord_get_self(client);
   log_info("[DISCORD_GATEWAY] Logged in as %s#%s!", bot->username, bot->discriminator);
-}
-
-void on_voice_state_update(
-  struct discord *client, 
-  const struct discord_user *bot, 
-  const struct discord_voice_state *voice_state) {
-    (void) client; (void) bot;
-    sqlite3 *db = NULL;
-    char *query = NULL, *errMsg = NULL;
-    int rc = sqlite3_open("database.db", &db);
-
-    pthread_mutex_lock(&global_lock);
-      if(voice_state->member->user->id == bot->id) snprintf(session_id, sizeof(session_id), "%s", voice_state->session_id);
-    pthread_mutex_unlock(&global_lock);
-
-    query = sqlite3_mprintf("CREATE TABLE IF NOT EXISTS guild_voice(guild_id INT, USER_ID INT, voice_channel_id INT);");
-    rc = sqlite3_exec(db, query, NULL, NULL, &errMsg);
-
-    query = sqlite3_mprintf("DELETE FROM guild_voice WHERE user_id = %lu;", voice_state->user_id);
-    rc = sqlite3_exec(db, query, NULL, NULL, &errMsg);
-
-    if (voice_state->channel_id) {
-      query = sqlite3_mprintf("INSERT INTO guild_voice(guild_id, user_id, voice_channel_id) values(%lu, %lu, %lu);", voice_state->guild_id, voice_state->user_id, voice_state->channel_id);
-      rc = sqlite3_exec(db, query, NULL, NULL, &errMsg);
-    }
-
-    sqlite3_free(query);
-  }
-
-void on_voice_server_update(
-  struct discord *client, 
-  const struct discord_user *bot, 
-  const char *token, 
-  const u64_snowflake_t guild_id, 
-  const char *endpoint) {
-    (void) client; (void) bot;(void) token; (void) endpoint;
-    pthread_mutex_lock(&global_lock);
-      voice_server_guild_id = guild_id;
-      snprintf(all_event, sizeof(all_event), "{\"token\":\"%s\",\"guild_id\":\"%"PRIu64"\",\"endpoint\": \"%s\"}", token, guild_id, endpoint);
-      send_voice_server_payload = true;
-    
-      if (0 != strcmp(track, "null")) send_play_payload = true;
-    pthread_mutex_unlock(&global_lock);
 }
 
 void on_message(
   struct discord *client, 
-  const struct discord_user *bot, 
   const struct discord_message *msg) {
-    (void) bot;
-    
-    if (0 == strcmp(msg->content, "!ping")) {
+    const struct discord_user *bot = discord_get_self(client);
+    if (0 == strcmp(msg->content, "?ping")) {
       if (msg->author->bot) return;
 
       struct discord_embed embed = { .color = 15615 };
 
-      discord_embed_set_title(&embed, "Ping %dms", client -> gw.hbeat -> ping_ms);
+      discord_embed_set_title(&embed, "Ping %dms", discord_get_ping(client));
       discord_embed_set_footer(&embed, "Powered by Orca", "https://raw.githubusercontent.com/cee-studio/orca-docs/master/docs/source/images/icon.svg", NULL);
       discord_embed_set_image(&embed, "https://github.com/cee-studio/orca-docs/blob/master/docs/source/images/social-preview.png?raw=true", NULL, 0, 0);
 
       struct discord_create_message_params params = { .embed = &embed };
+      
+      discord_async_next(client, NULL);
       discord_create_message(client, msg -> channel_id, &params, NULL);
   }
 
-    if (0 == strncmp("!play ", msg->content, 6)) {
-      char *content = msg->content + 6; 
+  if (0 == strncmp("?play ", msg->content, 6)) {
+    char *content = msg->content + 6; 
 
-      sqlite3 *db = NULL;
-      sqlite3_stmt *stmt = NULL;
-      int rc = sqlite3_open("database.db", &db);
-      char *query = NULL;
+    sqlite3 *db = NULL;
+    sqlite3_stmt *stmt = NULL;
+    int rc = sqlite3_open("database.db", &db);
+    char *query = NULL;
 
-      query = sqlite3_mprintf("SELECT guild_id, user_id, voice_channel_id FROM guild_voice WHERE user_id = %"PRIu64";", msg->author->id);
-      rc = sqlite3_prepare_v2(db, query, -1, &stmt, NULL);
+    query = sqlite3_mprintf("SELECT guild_id, user_id, voice_channel_id FROM guild_voice WHERE user_id = %"PRIu64";", msg->author->id);
+    rc = sqlite3_prepare_v2(db, query, -1, &stmt, NULL);
 
-      while ((rc = sqlite3_step(stmt)) != SQLITE_DONE) {
-        discord_voice_join(client, msg->guild_id, sqlite3_column_int64(stmt, 2), false, true);
+    while ((rc = sqlite3_step(stmt)) != SQLITE_DONE) {
+      discord_voice_join(client, msg->guild_id, sqlite3_column_int64(stmt, 2), false, true);
          
-        struct discord_embed embed = { .color = 15615 };
-         
-        cJSON *track = cJSON_GetArrayItem(tracks, 0);
-        cJSON *info = cJSON_GetObjectItemCaseSensitive(track, "info");
-        cJSON *title = cJson_GetObjectItemCaseSensitive(info, "title");
-        cJSON *url = cJson_GetObjectItemCaseSensitive(info, "uri");
-        cJSON *author = cJson_GetObjectItemCaseSensitive(info, "author");
-        cJSON *length = cJson_GetObjectItemCaseSensitive(info, "length");
-        char descriptionEmbed[1024];
+      struct discord_embed embed = { .color = 15615 };
 
-        if(((int) round(length->valuedouble) / 1000 % 60) > 10) {
-          snprintf(descriptionEmbed, sizeof(descriptionEmbed), "<a:yes:757568594841305149> | Ok, playing music rn!\n<:Info:772480355293986826> | Author: `%s`\n\n<:Cooldown:735255003161165915> | Time: `%d:%d`", author->valuestring, ((int) round(length->valuedouble / 1000) / 60) << 0, (int) round(length->valuedouble) / 1000 % 60);
-        } else {
-          snprintf(descriptionEmbed, sizeof(descriptionEmbed), "<a:yes:757568594841305149> | Ok, playing music rn!\n<:Info:772480355293986826> | Author: `%s`\n\n<:Cooldown:735255003161165915> | Time: `%d:0%d`", author->valuestring, ((int) round(length->valuedouble / 1000) / 60) << 0, (int) round(length->valuedouble) / 1000 % 60);
-        }
-
-        discord_embed_set_title(&embed, title->valuestring);
-        discord_embed_set_url(&embed, url->valuestring);
-        discord_embed_set_description(&embed, descriptionEmbed)
-        discord_embed_set_footer(&embed, "Powered by Orca", "https://raw.githubusercontent.com/cee-studio/orca-docs/master/docs/source/images/icon.svg", NULL);
-
-        struct discord_create_message_params params = { .embed = &embed };
-        discord_create_message(client, msg -> channel_id, &params, NULL);
-
-        FILE *fp = fopen("./config.json", "rb");
-        struct logconf conf = {};
-        logconf_setup(&conf, "USER_AGENT", fp);
-
-        struct user_agent *ua = ua_init(&conf);
-
-        char url[64];
-        char pass[64];
-        sprintf(url, "https://%s", lavalinkNodeUrl);
-        sprintf(pass, "%s", lavalinkNodePassword);
-
-        ua_set_url(ua, url);
-        ua_reqheader_add(ua, "Authorization", pass);
-        ua_reqheader_add(ua, "Client-Name", "MusicBotWithOrca");
-        ua_curl_easy_setopt(ua, NULL, &curl_easy_setopt_cb);
-
-        struct ua_info info = {};
-        char endpoint[1024];
-        if(StartsWith(content, "https://")) {
-          snprintf(endpoint, sizeof(endpoint), "/loadtracks?identifier=%s", content);
-        } else {
-          snprintf(endpoint, sizeof(endpoint), "/loadtracks?identifier=ytsearch:%s", content);
-        }
-
-        for(unsigned long i = 0; i < strlen(endpoint); i++){  
-          if(endpoint[i] == ' ') endpoint[i] = '+';  
-        }
-
-        ua_run(ua, &info, NULL, NULL, HTTP_GET, endpoint);
-
-        struct sized_buffer body = ua_info_get_body(&info);
-
-        cJSON *payload = cJSON_ParseWithLength(body.start, body.size); 
-        cJSON *tracks = cJSON_GetObjectItemCaseSensitive(payload, "tracks");
-        cJSON *trackFromTracks = cJSON_GetObjectItemCaseSensitive(cJSON_GetArrayItem(tracks, 0), "track");
-
-        pthread_mutex_lock(&global_lock);
-          if(0 != strcmp(track, "null")) send_play_payload = true;
-          snprintf(track, sizeof(track), "%s", trackFromTracks->valuestring);
-          voice_server_guild_id = msg->guild_id;
-        pthread_mutex_unlock(&global_lock);
-
-        ua_info_cleanup(&info);
-        ua_cleanup(ua);
-        cJSON_Delete(payload);
+      struct ua_info info = {};
+      char endpoint[1024] = "";
+        
+      if(StartsWith(content, "https://")) {
+        snprintf(endpoint, sizeof(endpoint), "https://%s/loadtracks?identifier=%s", lavalinkNodeUrl, content);
+      } else {
+        snprintf(endpoint, sizeof(endpoint), "https://%s/loadtracks?identifier=ytsearch:%s", lavalinkNodeUrl, content);
       }
-      sqlite3_free(query);
-    }
-  }
 
-void *lavalink(void *id) {
-  (void)id;
+      for(unsigned long i = 0; i < strlen(endpoint); i++){  
+        if(endpoint[i] == ' ') endpoint[i] = '+';  
+      }
+        
+      struct user_agent *ua = ua_init(NULL);
+      struct ua_conn_attr conn_attr = { .method = HTTP_GET };
+        
+      ua_set_url(ua, endpoint);
+      ua_set_opt(ua, NULL, &default_config);
+      ua_easy_run(ua, &info, NULL, &conn_attr);
+
+      struct sized_buffer body = ua_info_get_body(&info);
+
+      cJSON *payload = cJSON_ParseWithLength(body.start, body.size); 
+      cJSON *tracks = cJSON_GetObjectItemCaseSensitive(payload, "tracks");
+      cJSON *trackFromTracks = cJSON_GetObjectItemCaseSensitive(cJSON_GetArrayItem(tracks, 0), "track");
+
+      cJSON *track = cJSON_GetArrayItem(tracks, 0);
+      cJSON *Info = cJSON_GetObjectItemCaseSensitive(track, "info");
+      cJSON *title = cJSON_GetObjectItemCaseSensitive(Info, "title");
+      cJSON *url = cJSON_GetObjectItemCaseSensitive(Info, "uri");
+      cJSON *author = cJSON_GetObjectItemCaseSensitive(Info, "author");
+      cJSON *length = cJSON_GetObjectItemCaseSensitive(Info, "length");
+      cJSON *artwork = cJSON_GetObjectItemCaseSensitive(Info, "artwork");
+        
+      if (!body.size) {
+        printf("[PLAY] Failed to fetch music information.\n");
+        return; 
+      }
+        
+      char descriptionEmbed[1024];
+
+      if(((int) round(length->valuedouble) / 1000 % 60) > 10) {
+          snprintf(descriptionEmbed, sizeof(descriptionEmbed), "<a:yes:757568594841305149> | Ok, playing music rn!\n<:Info:772480355293986826> | Author: `%s`\n:musical_note: | Name: `%s`\n<:Cooldown:735255003161165915> | Time: `%d:%d`", author->valuestring, title->valuestring, ((int) round(length->valuedouble / 1000) / 60) << 0, (int) round(length->valuedouble) / 1000 % 60);
+      } else {
+          snprintf(descriptionEmbed, sizeof(descriptionEmbed), "<a:yes:757568594841305149> | Ok, playing music rn!\n<:Info:772480355293986826> | Author: `%s`\n:musical_note: | Name: `%s`\n<:Cooldown:735255003161165915> | Time: `%d:0%d`", author->valuestring, title->valuestring, ((int) round(length->valuedouble / 1000) / 60) << 0, (int) round(length->valuedouble) / 1000 % 60);  
+      }
+
+      discord_embed_set_title(&embed, title->valuestring);
+      discord_embed_set_url(&embed, url->valuestring);
+      //discord_embed_set_thumbnail(&embed, bot->avatar, NULL, 0, 0);
+      discord_embed_set_description(&embed, descriptionEmbed);
+      discord_embed_set_image(&embed, artwork->valuestring, NULL, 0, 0);
+      discord_embed_set_footer(&embed, "Powered by Orca", "https://raw.githubusercontent.com/cee-studio/orca-docs/master/docs/source/images/icon.svg", NULL);
+
+      struct discord_create_message_params params = { .embed = &embed };
+        
+      discord_async_next(client, NULL);
+      discord_create_message(client, msg -> channel_id, &params, NULL);
+
+      if(0 != strcmp(g_track, "null")) send_play_payload = true;
+      snprintf(g_track, sizeof(g_track), "%s", trackFromTracks->valuestring);
+      voice_server_guild_id = msg->guild_id;
+
+      ua_info_cleanup(&Info);
+      ua_cleanup(ua);
+      cJSON_Delete(payload);
+    }
+    sqlite3_free(query);
+  }
+}
+
+discord_event_scheduler_t scheduler(
+  struct discord *client,
+  struct sized_buffer *data,
+  enum discord_gateway_events event) {
+    switch (event) {
+      case DISCORD_GATEWAY_EVENTS_VOICE_STATE_UPDATE: {
+        struct discord_voice_state vs;
+        discord_voice_state_from_json(data->start, data->size, &vs);
+
+        sqlite3 *db = NULL;
+        char *query = NULL, *errMsg = NULL;
+        sqlite3_open("database.db", &db);
+    
+        const struct discord_user *bot = discord_get_self(client);
+
+        if(vs.member->user->id == bot->id) snprintf(session_id, sizeof(session_id), "%s", vs.session_id);
+
+        query = sqlite3_mprintf("CREATE TABLE IF NOT EXISTS guild_voice(guild_id INT, USER_ID INT, voice_channel_id INT);");
+        sqlite3_exec(db, query, NULL, NULL, &errMsg);
+
+        query = sqlite3_mprintf("DELETE FROM guild_voice WHERE user_id = %lu;", vs.user_id);
+        sqlite3_exec(db, query, NULL, NULL, &errMsg);
+
+        if (vs.channel_id) {
+          query = sqlite3_mprintf("INSERT INTO guild_voice(guild_id, user_id, voice_channel_id) values(%lu, %lu, %lu);", vs.guild_id, vs.user_id, vs.channel_id);
+          sqlite3_exec(db, query, NULL, NULL, &errMsg);
+        }
+
+        sqlite3_free(query);
+
+        discord_voice_state_cleanup(&vs);
+      } return DISCORD_EVENT_IGNORE;
+    case DISCORD_GATEWAY_EVENTS_VOICE_SERVER_UPDATE: {
+      u64_snowflake_t guild_id = 0;
+      
+      json_extract(data->start, data->size, "(guild_id):s_as_u64", &guild_id);
+
+      voice_server_guild_id = guild_id;
+      snprintf(all_event, sizeof(all_event), "%.*s", (int)data->size, data->start);
+      send_voice_server_payload = true;
+    
+      if (0 != strcmp(g_track, "null")) send_play_payload = true;
+   } return DISCORD_EVENT_IGNORE;
+    default: 
+      return DISCORD_EVENT_MAIN_THREAD;
+   }
+}
+
+ORCAcode discord_custom_run(struct discord *client) {
+  ORCAcode code;
+
   struct ws_callbacks cbs = {
     .on_text = &on_text,
     .on_connect = &on_connect,
     .on_close = &on_close
   };
 
-  FILE *fp = fopen("./config.json", "rb");
-  struct logconf conf = {};
-  logconf_setup(&conf, "LAVALINK", fp);
-  struct websockets *ws = ws_init(&cbs, &conf);
+  CURLM *mhandle = curl_multi_init();
+  struct websockets *ws = ws_init(&cbs, mhandle, NULL);
   
   char url[64];
-  char pass[64];
-  char botid[18];
-  char shards[64];
   snprintf(url, sizeof(url), "wss://%s", lavalinkNodeUrl);
-  snprintf(pass, sizeof(pass), "%s", lavalinkNodePassword);
-  snprintf(botid, sizeof(botId), "%s", botId);
-  snprintf(shards, sizeof(shards), "%s", totalShards);
   
-  ws_set_url(ws, lavalinkNodeUrl, NULL);
+  ws_set_url(ws, url, NULL);
   ws_start(ws);
-  ws_reqheader_add(ws, "Authorization", lavalinkNodePassword);
-  ws_reqheader_add(ws, "Num-Shards", totalShards);
-  ws_reqheader_add(ws, "User-Id", botId);
-  ws_reqheader_add(ws, "Client-Name", "MusicBotWithOrca");
+  ws_add_header(ws, "Authorization", lavalinkNodePassword);
+  ws_add_header(ws, "Num-Shards", totalShards);
+  ws_add_header(ws, "User-Id", botId);
+  ws_add_header(ws, "Client-Name", "MusicBotWithOrca");
   
-  bool is_running = false;
+  uint64_t tstamp;
+
   while (1) {
-    ws_perform(ws, &is_running, 5);
-    if(!is_running) break;
+    code = discord_gateway_start(&client->gw);
+    if (code != ORCA_OK) break;
 
-    pthread_mutex_lock(&global_lock);
-    if (send_voice_server_payload == true && voice_server_guild_id && 0 != strcmp(session_id, "null") && 0 != strcmp(all_event, "NULL")) {
-      char payloadJson[1024];
-      snprintf(payloadJson, sizeof(payloadJson), "{\"op\":\"voiceUpdate\",\"guildId\":\"%"PRIu64"\",\"sessionId\":\"%s\",\"event\":%s}", voice_server_guild_id, session_id, all_event);
-      ws_send_text(ws, NULL, payloadJson, strlen(payloadJson));
-      printf("\n\n%s\n\n", payloadJson);
-      session_id[0] = '\0';
-      all_event[0] = '\0';
-      send_voice_server_payload = false;
+    do {
+      code = discord_gateway_perform(&client->gw);
+      if (code != ORCA_OK) break;
+
+      code = discord_adapter_perform(&client->adapter);
+      if (code != ORCA_OK) break;
+          
+      ws_easy_run(ws, 5, &tstamp);
+
+      if (send_voice_server_payload == true && voice_server_guild_id && 0 != strcmp(session_id, "null") && 0 != strcmp(all_event, "NULL")) {
+        char payloadJson[1650];
+
+        snprintf(payloadJson, sizeof(payloadJson), "{\"op\":\"voiceUpdate\",\"guildId\":\"%"PRIu64"\",\"sessionId\":\"%s\",\"event\":%s}", voice_server_guild_id, session_id, all_event);
+        ws_send_text(ws, NULL, payloadJson, strlen(payloadJson));
+
+        printf("\n\n%s\n\n", payloadJson);
+
+        session_id[0] = '\0';
+        all_event[0] = '\0';
+        send_voice_server_payload = false;
+      }
+  
+      if (send_play_payload == true && voice_server_guild_id && 0 != strcmp(g_track, "null")) {
+        char payloadJson[1650];
+
+        snprintf(payloadJson, sizeof(payloadJson), "{\"op\":\"play\",\"guildId\":\"%"PRIu64"\",\"track\":\"%s\",\"noReplace\":\"false\",\"pause\":\"false\"}", voice_server_guild_id, g_track);
+        ws_send_text(ws, NULL, payloadJson, strlen(payloadJson));
+
+        printf("\n\n%s\n\n", payloadJson);
+
+        g_track[0] = '\0';
+        send_voice_server_payload = 0;
+        send_play_payload = false;
+      } 
+    } while (1);
+
+    if (discord_gateway_end(&client->gw)) {
+      discord_adapter_stop_all(&client->adapter);
+      break;
     }
-
-    if (send_play_payload == true && voice_server_guild_id && 0 != strcmp(track, "null")) {
-      char payloadJson[1024];
-      snprintf(payloadJson, sizeof(payloadJson), "{\"op\":\"play\",\"guildId\":\"%"PRIu64"\",\"track\":\"%s\",\"noReplace\":\"false\",\"pause\":\"false\"}", voice_server_guild_id, track);
-      ws_send_text(ws, NULL, payloadJson, strlen(payloadJson));
-      printf("\n\n%s\n\n", payloadJson);
-      track[0] = '\0';
-      send_voice_server_payload = 0;
-      send_play_payload = false;
-    } 
-    pthread_mutex_unlock(&global_lock);
   }
-  return NULL;
+
+  return code;
 }
 
 int main() {
-  pthread_t thread_id;
-
-  pthread_create(&thread_id, NULL, lavalink, NULL);
-
-  struct discord *client = discord_config_init("./config.json");
+  struct discord *client = discord_init("YOUR_BOT_TOKEN_HERE");
+  
+  struct logconf *conf = discord_get_logconf(client);
+  logconf_set_quiet(conf, false);
+  
   discord_set_on_ready(client, &on_ready);
   discord_set_on_message_create(client, &on_message);
-  discord_set_on_voice_state_update(client, &on_voice_state_update);
-  discord_set_on_voice_server_update(client, &on_voice_server_update);
+  discord_set_event_scheduler(client, &scheduler);
   
-  discord_run(client);
-  pthread_join(thread_id, NULL);
+  discord_add_intents(client, DISCORD_GATEWAY_GUILD_VOICE_STATES);
+  discord_custom_run(client);
+  
+  discord_cleanup(client);
 }

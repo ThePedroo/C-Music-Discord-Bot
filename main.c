@@ -303,7 +303,7 @@ ORCAcode discord_custom_run(struct discord *client) {
 }
 
 int main() {
-  struct discord *client = discord_init("YOUR_BOT_TOKEN_HERE");
+  struct discord *client = discord_config_init("./config.json");
   
   struct logconf *conf = discord_get_logconf(client);
   logconf_set_quiet(conf, false);

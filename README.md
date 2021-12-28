@@ -8,7 +8,7 @@ It's easy to use and install.
 
 1 - Use git clone https://github.com/ThePedroo/C-Music-Discord-Bot.git
 
-2 - Install and build [Orca](https://github.com/cee-studio/orca) and [cJSON](https://github.com/DaveGamble/cJSON) too.
+2 - Install and build [Orca](https://github.com/cee-studio/orca).
 
 3 - Install clang / GCC.
 
@@ -25,16 +25,11 @@ The bot use sqlite3 for save the channelId that the user is in it, so you will n
 apt install sqlite3
 ```
 
-7 - If you did everything correct, use:
-```bash
-clang main.c -o main.out -Wall -Wextra -Werror -g -pthread -ldiscord -lcurl -lcrypto -lpthread -lm -lsqlite3 && ./main.out
-```
-or
-```bash
-gcc main.c -o main.out -Wall -Wextra -Werror -g -pthread -ldiscord -lcurl -lcrypto -lpthread -lm -lsqlite3 && ./main.out
+7 - If you did everything correct, use: ```
+make && ./main
 ```
 
-8 - The bot is probably online, use !play <music> and feel free to listen to your favorite musics.
+8 - The bot is probably online, use ?play <music> and feel free to listen to your favorite musics.
   
 # Information
  

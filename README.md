@@ -25,7 +25,8 @@ The bot use sqlite3 for save the channelId that the user is in it, so you will n
 apt install sqlite3
 ```
 
-7 - If you did everything correct, use: ```
+7 - If you did everything correct, use: 
+```
 make && ./main
 ```
 

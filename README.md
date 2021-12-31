@@ -16,7 +16,7 @@ It's easy to use and install.
 
 5 - Fill the URL of the Lavalink node
 
-5 - info - Doesn't have a [Lavalink](https://github.com/freyacodes/Lavalink) node? Setup it on [replit.com](https://replit.com/).
+6 - info - Doesn't have a [Lavalink](https://github.com/freyacodes/Lavalink) node? Setup it on [replit.com](https://replit.com/).
   
 ## Before we continue...
 

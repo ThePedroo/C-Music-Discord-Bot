@@ -7,9 +7,9 @@ INCLUDEDIR := include
 SRC := $(wildcard $(SRCDIR)/*.c $(SRCDIR)/**/*.c)
 OBJS := $(SRC:$(SRCDIR)/%.c=$(OBJDIR)/%.o)
 
-MAIN := main2
+MAIN := main
 
-CFLAGS := -pthread -Wall -Wextra -O3 -g -I$(INCLUDEDIR)
+CFLAGS := -pthread -Wall -Wextra -O3 -I$(INCLUDEDIR)
 LDFLAGS := -ldiscord -lcurl -lcrypto -lm -lsqlite3
 
 $(OBJDIR)/%.o: $(SRCDIR)/%.c

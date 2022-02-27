@@ -78,7 +78,6 @@ void on_ready(
 void on_message(
   struct discord *client, 
   const struct discord_message *msg) {
-    const struct discord_user *bot = discord_get_self(client);
     if (0 == strcmp(msg->content, "?ping")) {
       if (msg->author->bot) return;
 
@@ -159,7 +158,6 @@ void on_message(
 
       discord_embed_set_title(&embed, title->valuestring);
       discord_embed_set_url(&embed, url->valuestring);
-      //discord_embed_set_thumbnail(&embed, bot->avatar, NULL, 0, 0);
       discord_embed_set_description(&embed, descriptionEmbed);
       discord_embed_set_image(&embed, artwork->valuestring, NULL, 0, 0);
       discord_embed_set_footer(&embed, "Powered by Orca", "https://raw.githubusercontent.com/cee-studio/orca-docs/master/docs/source/images/icon.svg", NULL);
@@ -173,7 +171,6 @@ void on_message(
       snprintf(g_track, sizeof(g_track), "%s", trackFromTracks->valuestring);
       voice_server_guild_id = msg->guild_id;
 
-      ua_info_cleanup(&Info);
       ua_cleanup(ua);
       cJSON_Delete(payload);
     }
@@ -241,7 +238,7 @@ ORCAcode discord_custom_run(struct discord *client) {
   CURLM *mhandle = curl_multi_init();
   struct websockets *ws = ws_init(&cbs, mhandle, NULL);
   
-  char url[64];
+  char url[128];
   snprintf(url, sizeof(url), "wss://%s", lavalinkNodeUrl);
   
   ws_set_url(ws, url, NULL);

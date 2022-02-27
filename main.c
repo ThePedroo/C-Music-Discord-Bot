@@ -25,10 +25,7 @@ char lavalinkNodePassword[64] = "youshallnotpass";
 char totalShards[64] = "1"; //Default.
 char botId[18] = "BOT_ID_HERE";
 
-int StartsWith(const char *a, const char *b) {
-   if(strncmp(a, b, strlen(b)) == 0) return 1;
-   return 0;
-}
+struct discord *client;
 
 void on_text(void *data, struct websockets *ws, struct ws_info *info, const char *text, size_t len) {
   (void)data; (void)info; (void)ws; (void)text; (void)len;
@@ -37,7 +34,7 @@ void on_text(void *data, struct websockets *ws, struct ws_info *info, const char
   if(0 == strcmp(payloadOp->valuestring, "TrackEndEvent")) {
     g_track[0] = '\0';
   }
-  printf("\n%s\n\n", text);
+  cJSON_Delete(payload);
 }
 
 void default_config(struct ua_conn *conn, void *data) {
@@ -91,6 +88,8 @@ void on_message(
       
       discord_async_next(client, NULL);
       discord_create_message(client, msg -> channel_id, &params, NULL);
+
+      discord_embed_cleanup(&embed);
   }
 
   if (0 == strncmp("?play ", msg->content, 6)) {
@@ -112,7 +111,7 @@ void on_message(
       struct ua_info info = {};
       char endpoint[1024] = "";
         
-      if(StartsWith(content, "https://")) {
+      if (0 == strncmp(content, "https://", strlen("https://"))) {
         snprintf(endpoint, sizeof(endpoint), "https://%s/loadtracks?identifier=%s", lavalinkNodeUrl, content);
       } else {
         snprintf(endpoint, sizeof(endpoint), "https://%s/loadtracks?identifier=ytsearch:%s", lavalinkNodeUrl, content);
@@ -151,9 +150,9 @@ void on_message(
       char descriptionEmbed[1024];
 
       if(((int) round(length->valuedouble) / 1000 % 60) > 10) {
-          snprintf(descriptionEmbed, sizeof(descriptionEmbed), "<a:yes:757568594841305149> | Ok, playing music rn!\n<:Info:772480355293986826> | Author: `%s`\n:musical_note: | Name: `%s`\n<:Cooldown:735255003161165915> | Time: `%d:%d`", author->valuestring, title->valuestring, ((int) round(length->valuedouble / 1000) / 60) << 0, (int) round(length->valuedouble) / 1000 % 60);
+        snprintf(descriptionEmbed, sizeof(descriptionEmbed), "<a:yes:757568594841305149> | Ok, playing music rn!\n<:Info:772480355293986826> | Author: `%s`\n:musical_note: | Name: `%s`\n<:Cooldown:735255003161165915> | Time: `%d:%d`", author->valuestring, title->valuestring, ((int) round(length->valuedouble / 1000) / 60) << 0, (int) round(length->valuedouble) / 1000 % 60);
       } else {
-          snprintf(descriptionEmbed, sizeof(descriptionEmbed), "<a:yes:757568594841305149> | Ok, playing music rn!\n<:Info:772480355293986826> | Author: `%s`\n:musical_note: | Name: `%s`\n<:Cooldown:735255003161165915> | Time: `%d:0%d`", author->valuestring, title->valuestring, ((int) round(length->valuedouble / 1000) / 60) << 0, (int) round(length->valuedouble) / 1000 % 60);  
+        snprintf(descriptionEmbed, sizeof(descriptionEmbed), "<a:yes:757568594841305149> | Ok, playing music rn!\n<:Info:772480355293986826> | Author: `%s`\n:musical_note: | Name: `%s`\n<:Cooldown:735255003161165915> | Time: `%d:0%d`", author->valuestring, title->valuestring, ((int) round(length->valuedouble / 1000) / 60) << 0, (int) round(length->valuedouble) / 1000 % 60);  
       }
 
       discord_embed_set_title(&embed, title->valuestring);
@@ -167,6 +166,8 @@ void on_message(
       discord_async_next(client, NULL);
       discord_create_message(client, msg -> channel_id, &params, NULL);
 
+      discord_embed_cleanup(&embed);
+
       if(0 != strcmp(g_track, "NULL")) send_play_payload = true;
       snprintf(g_track, sizeof(g_track), "%s", trackFromTracks->valuestring);
       voice_server_guild_id = msg->guild_id;
@@ -174,6 +175,8 @@ void on_message(
       ua_cleanup(ua);
       cJSON_Delete(payload);
     }
+    sqlite3_finalize(stmt);
+    sqlite3_close(db);
     sqlite3_free(query);
   }
 }
@@ -198,16 +201,21 @@ discord_event_scheduler_t scheduler(
         query = sqlite3_mprintf("CREATE TABLE IF NOT EXISTS guild_voice(guild_id INT, USER_ID INT, voice_channel_id INT);");
         sqlite3_exec(db, query, NULL, NULL, &errMsg);
 
+        sqlite3_free(query);
+
         query = sqlite3_mprintf("DELETE FROM guild_voice WHERE user_id = %lu;", vs.user_id);
         sqlite3_exec(db, query, NULL, NULL, &errMsg);
+
+        sqlite3_free(query);
 
         if (vs.channel_id) {
           query = sqlite3_mprintf("INSERT INTO guild_voice(guild_id, user_id, voice_channel_id) values(%lu, %lu, %lu);", vs.guild_id, vs.user_id, vs.channel_id);
           sqlite3_exec(db, query, NULL, NULL, &errMsg);
+
+          sqlite3_free(query);
         }
-
-        sqlite3_free(query);
-
+        
+        sqlite3_close(db);
         discord_voice_state_cleanup(&vs);
       } return DISCORD_EVENT_IGNORE;
     case DISCORD_GATEWAY_EVENTS_VOICE_SERVER_UPDATE: {
@@ -269,8 +277,6 @@ ORCAcode discord_custom_run(struct discord *client) {
         snprintf(payloadJson, sizeof(payloadJson), "{\"op\":\"voiceUpdate\",\"guildId\":\"%"PRIu64"\",\"sessionId\":\"%s\",\"event\":%s}", voice_server_guild_id, session_id, all_event);
         ws_send_text(ws, NULL, payloadJson, strlen(payloadJson));
 
-        printf("\n\n%s\n\n", payloadJson);
-
         session_id[0] = '\0';
         all_event[0] = '\0';
         send_voice_server_payload = false;
@@ -281,8 +287,6 @@ ORCAcode discord_custom_run(struct discord *client) {
 
         snprintf(payloadJson, sizeof(payloadJson), "{\"op\":\"play\",\"guildId\":\"%"PRIu64"\",\"track\":\"%s\",\"noReplace\":\"false\",\"pause\":\"false\"}", voice_server_guild_id, g_track);
         ws_send_text(ws, NULL, payloadJson, strlen(payloadJson));
-
-        printf("\n\n%s\n\n", payloadJson);
 
         g_track[0] = '\0';
         send_voice_server_payload = 0;
@@ -296,11 +300,22 @@ ORCAcode discord_custom_run(struct discord *client) {
     }
   }
 
+  ws_end(ws);
+
+  ws_cleanup(ws);
+  curl_multi_cleanup(mhandle);
+
   return code;
 }
 
+void sigint_handler(int signum) {
+  (void)signum;
+  log_fatal("SIGINT received, shutting down ...");
+  discord_shutdown(client);
+}
+
 int main() {
-  struct discord *client = discord_config_init("./config.json");
+  client = discord_config_init("./config.json");
   
   struct logconf *conf = discord_get_logconf(client);
   logconf_set_quiet(conf, false);
@@ -308,9 +323,12 @@ int main() {
   discord_set_on_ready(client, &on_ready);
   discord_set_on_message_create(client, &on_message);
   discord_set_event_scheduler(client, &scheduler);
+
+  signal(SIGINT, &sigint_handler);
   
   discord_add_intents(client, DISCORD_GATEWAY_GUILD_VOICE_STATES);
   discord_custom_run(client);
   
   discord_cleanup(client);
+  orca_global_cleanup();
 }

@@ -18,7 +18,7 @@ char session_id[64];
 char all_event[1512] = "NULL";
 
 bool send_play_payload = false;
-char g_track[512] = "null";
+char g_track[512] = "NULL";
 
 char lavalinkNodeUrl[64] = "example.com"; //If it dosen't use SSL, replace https with http & wss with ws.
 char lavalinkNodePassword[64] = "youshallnotpass";
@@ -167,7 +167,7 @@ void on_message(
       discord_async_next(client, NULL);
       discord_create_message(client, msg -> channel_id, &params, NULL);
 
-      if(0 != strcmp(g_track, "null")) send_play_payload = true;
+      if(0 != strcmp(g_track, "NULL")) send_play_payload = true;
       snprintf(g_track, sizeof(g_track), "%s", trackFromTracks->valuestring);
       voice_server_guild_id = msg->guild_id;
 
@@ -263,7 +263,7 @@ ORCAcode discord_custom_run(struct discord *client) {
           
       ws_easy_run(ws, 5, &tstamp);
 
-      if (send_voice_server_payload == true && voice_server_guild_id && 0 != strcmp(session_id, "null") && 0 != strcmp(all_event, "NULL")) {
+      if (send_voice_server_payload == true && voice_server_guild_id && 0 != strcmp(session_id, "NULL") && 0 != strcmp(all_event, "NULL")) {
         char payloadJson[1650];
 
         snprintf(payloadJson, sizeof(payloadJson), "{\"op\":\"voiceUpdate\",\"guildId\":\"%"PRIu64"\",\"sessionId\":\"%s\",\"event\":%s}", voice_server_guild_id, session_id, all_event);
@@ -276,7 +276,7 @@ ORCAcode discord_custom_run(struct discord *client) {
         send_voice_server_payload = false;
       }
   
-      if (send_play_payload == true && voice_server_guild_id && 0 != strcmp(g_track, "null")) {
+      if (send_play_payload == true && voice_server_guild_id && 0 != strcmp(g_track, "NULL")) {
         char payloadJson[1650];
 
         snprintf(payloadJson, sizeof(payloadJson), "{\"op\":\"play\",\"guildId\":\"%"PRIu64"\",\"track\":\"%s\",\"noReplace\":\"false\",\"pause\":\"false\"}", voice_server_guild_id, g_track);

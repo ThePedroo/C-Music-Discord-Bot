@@ -1,6 +1,8 @@
 #include <string.h>
 #include <stdio.h>
+#include <sys/resource.h>
 #include <math.h>
+#include <signal.h>
 
 #include <curl/curl.h>
 #include <cJSON.h>
@@ -20,15 +22,14 @@ char all_event[1512] = "NULL";
 bool send_play_payload = false;
 char g_track[512] = "NULL";
 
-char lavalinkNodeUrl[64] = "example.com"; //If it dosen't use SSL, replace https with http & wss with ws.
+char lavalinkNodeUrl[64] = "example.com"; // If it doesn't use SSL, replace the code below with http instead of https & ws instead of wss.
 char lavalinkNodePassword[64] = "youshallnotpass";
-char totalShards[64] = "1"; //Default.
+char totalShards[64] = "1"; // Default.
 char botId[18] = "BOT_ID_HERE";
-
 struct discord *client;
 
 void on_text(void *data, struct websockets *ws, struct ws_info *info, const char *text, size_t len) {
-  (void)data; (void)info; (void)ws; (void)text; (void)len;
+  (void)data; (void)info; (void)ws;
   cJSON *payload = cJSON_ParseWithLength(text, len); 
   cJSON *payloadOp = cJSON_GetObjectItemCaseSensitive(payload, "op");
   if(0 == strcmp(payloadOp->valuestring, "TrackEndEvent")) {
@@ -38,10 +39,8 @@ void on_text(void *data, struct websockets *ws, struct ws_info *info, const char
 }
 
 void default_config(struct ua_conn *conn, void *data) {
-  (void) data; 
-  char pass[64];
-  snprintf(pass, sizeof(pass), "%s", lavalinkNodePassword);
-  ua_conn_add_header(conn, "Authorization", pass);
+  (void) data;
+  ua_conn_add_header(conn, "Authorization", lavalinkNodePassword);
   ua_conn_add_header(conn, "Client-Name", "MusicBotWithOrca");
 }
 
@@ -75,8 +74,8 @@ void on_ready(
 void on_message(
   struct discord *client, 
   const struct discord_message *msg) {
+    if (msg->author->bot) return;
     if (0 == strcmp(msg->content, "?ping")) {
-      if (msg->author->bot) return;
 
       struct discord_embed embed = { .color = 15615 };
 
@@ -103,12 +102,12 @@ void on_message(
     query = sqlite3_mprintf("SELECT guild_id, user_id, voice_channel_id FROM guild_voice WHERE user_id = %"PRIu64";", msg->author->id);
     rc = sqlite3_prepare_v2(db, query, -1, &stmt, NULL);
 
-    while ((rc = sqlite3_step(stmt)) != SQLITE_DONE) {
+    if ((rc = sqlite3_step(stmt)) != SQLITE_DONE) {
       discord_voice_join(client, msg->guild_id, sqlite3_column_int64(stmt, 2), false, true);
          
       struct discord_embed embed = { .color = 15615 };
 
-      struct ua_info info = {};
+      struct ua_info info = { 0 };
       char endpoint[1024] = "";
         
       if (0 == strncmp(content, "https://", strlen("https://"))) {
@@ -117,8 +116,8 @@ void on_message(
         snprintf(endpoint, sizeof(endpoint), "https://%s/loadtracks?identifier=ytsearch:%s", lavalinkNodeUrl, content);
       }
 
-      for(unsigned long i = 0; i < strlen(endpoint); i++){  
-        if(endpoint[i] == ' ') endpoint[i] = '+';  
+      for (unsigned long i = 0; i < strlen(endpoint); i++){  
+        if (endpoint[i] == ' ') endpoint[i] = '+';  
       }
         
       struct user_agent *ua = ua_init(NULL);
@@ -149,7 +148,7 @@ void on_message(
         
       char descriptionEmbed[1024];
 
-      if(((int) round(length->valuedouble) / 1000 % 60) > 10) {
+      if (((int) round(length->valuedouble) / 1000 % 60) > 10) {
         snprintf(descriptionEmbed, sizeof(descriptionEmbed), "<a:yes:757568594841305149> | Ok, playing music rn!\n<:Info:772480355293986826> | Author: `%s`\n:musical_note: | Name: `%s`\n<:Cooldown:735255003161165915> | Time: `%d:%d`", author->valuestring, title->valuestring, ((int) round(length->valuedouble / 1000) / 60) << 0, (int) round(length->valuedouble) / 1000 % 60);
       } else {
         snprintf(descriptionEmbed, sizeof(descriptionEmbed), "<a:yes:757568594841305149> | Ok, playing music rn!\n<:Info:772480355293986826> | Author: `%s`\n:musical_note: | Name: `%s`\n<:Cooldown:735255003161165915> | Time: `%d:0%d`", author->valuestring, title->valuestring, ((int) round(length->valuedouble / 1000) / 60) << 0, (int) round(length->valuedouble) / 1000 % 60);  
@@ -168,7 +167,7 @@ void on_message(
 
       discord_embed_cleanup(&embed);
 
-      if(0 != strcmp(g_track, "NULL")) send_play_payload = true;
+      if (0 != strcmp(g_track, "NULL")) send_play_payload = true;
       snprintf(g_track, sizeof(g_track), "%s", trackFromTracks->valuestring);
       voice_server_guild_id = msg->guild_id;
 
@@ -227,7 +226,7 @@ discord_event_scheduler_t scheduler(
       snprintf(all_event, sizeof(all_event), "%.*s", (int)data->size, data->start);
       send_voice_server_payload = true;
     
-      if (0 != strcmp(g_track, "null")) send_play_payload = true;
+      if (0 != strcmp(g_track, "NULL")) send_play_payload = true;
    } return DISCORD_EVENT_IGNORE;
     default: 
       return DISCORD_EVENT_MAIN_THREAD;

@@ -14,7 +14,7 @@ It's easy to use and install.
 
 4 - Edit config.json with your TOKEN.
 
-5 - Fill the URL of the Lavalink node
+5 - Fill Lavalink Node informations in main.c
 
 6 - info - Doesn't have a [Lavalink](https://github.com/freyacodes/Lavalink) node? Setup it on [replit.com](https://replit.com/).
   

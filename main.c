@@ -34,9 +34,14 @@ void on_message(struct discord *client, const struct discord_message *msg) {
     struct discord_embed embed[] = {
       {
         .description = description,
+        .image =
+          &(struct discord_embed_image){
+            .url = "https://raw.githubusercontent.com/Cogmasters/concord/master/docs/static/icon.ico",
+          },
         .footer =
           &(struct discord_embed_footer){
-            .text = "Powered by Concord"
+            .text = "Powered by Concord",
+            .icon_url = "https://raw.githubusercontent.com/Cogmasters/concord/master/docs/static/icon.ico"
           },
         .timestamp = discord_timestamp(client),
         .color = 15615
@@ -79,9 +84,14 @@ void on_message(struct discord *client, const struct discord_message *msg) {
       struct discord_embed embed[] = {
         {
           .description = "<a:Noo:757568484086382622> | You must say a music name or url.",
+          .image =
+            &(struct discord_embed_image){
+              .url = "https://raw.githubusercontent.com/Cogmasters/concord/master/docs/static/icon.ico",
+            },
           .footer =
             &(struct discord_embed_footer){
-              .text = "Powered by Concord"
+              .text = "Powered by Concord",
+              .icon_url = "https://raw.githubusercontent.com/Cogmasters/concord/master/docs/static/icon.ico"
             },
           .timestamp = discord_timestamp(client),
           .color = 16711680
@@ -222,9 +232,14 @@ void on_message(struct discord *client, const struct discord_message *msg) {
             .title = Title,
             .url = Url,
             .description = descriptionEmbed,
-            .footer =
+            .image =
+              &(struct discord_embed_image){
+                .url = "https://raw.githubusercontent.com/Cogmasters/concord/master/docs/static/icon.ico",
+              },
+           .footer =
               &(struct discord_embed_footer){
-                .text = "Powered by Concord"
+                .text = "Powered by Concord",
+                .icon_url = "https://raw.githubusercontent.com/Cogmasters/concord/master/docs/static/icon.ico"
               },
             .timestamp = discord_timestamp(client),
             .color = 15615
@@ -253,7 +268,8 @@ void on_message(struct discord *client, const struct discord_message *msg) {
               },
             .footer =
               &(struct discord_embed_footer){
-                .text = "Powered by Concord"
+                .text = "Powered by Concord",
+                .icon_url = "https://raw.githubusercontent.com/Cogmasters/concord/master/docs/static/icon.ico"
               },
             .timestamp = discord_timestamp(client),
             .color = 15615
@@ -291,9 +307,14 @@ void on_message(struct discord *client, const struct discord_message *msg) {
       struct discord_embed embed[] = {
         {
           .description = "<a:Noo:757568484086382622> | You are not in a voice channel.",
+          .image =
+            &(struct discord_embed_image){
+              .url = "https://raw.githubusercontent.com/Cogmasters/concord/master/docs/static/icon.ico",
+            },
           .footer =
             &(struct discord_embed_footer){
-              .text = "Powered by Concord"
+              .text = "Powered by Concord",
+              .icon_url = "https://raw.githubusercontent.com/Cogmasters/concord/master/docs/static/icon.ico"
             },
           .timestamp = discord_timestamp(client),
           .color = 16711680

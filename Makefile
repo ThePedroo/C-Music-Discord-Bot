@@ -10,7 +10,7 @@ OBJS := $(SRC:$(SRCDIR)/%.c=$(OBJDIR)/%.o)
 MAIN := main
 
 CFLAGS := -pthread -Wall -Wextra -Wpedantic -O3 -I$(INCLUDEDIR)
-LDFLAGS := -ldiscord -lcurl -lcrypto -lm -lsqlite3
+LDFLAGS := -ldiscord -lcurl -lsqlite3
 
 $(OBJDIR)/%.o: $(SRCDIR)/%.c
 	$(CC) $(CFLAGS) -c -o $@ $< $(LDFLAGS)

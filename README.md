@@ -42,4 +42,4 @@ make && ./main
 
  library for websockets: [Concord](https://github.com/Cogmasters/concord)
 
- JSON parse lib: [cJSON](https://github.com/lcsmuller/jsmn-find)
+ JSON parse lib: [jsmn-find](https://github.com/lcsmuller/jsmn-find)

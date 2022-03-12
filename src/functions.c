@@ -13,7 +13,7 @@
 #include <sqlite3.h>
 
 char lavalinkSecure = false; // If its using SSL or not.
-char lavalinkNodeUrl[64] = "example.com"; // If it doesn't use SSL, replace the code below with http instead of https & ws instead of wss.
+char lavalinkNodeUrl[64] = "example.com"; // Lavalink node URL.
 char lavalinkNodePassword[64] = "youshallnotpass";
 char totalShards[64] = "1"; // Default.
 char botId[18] = "BOT_ID_HERE";

@@ -1,6 +1,6 @@
 # What's the "Music Discord bot with C"?
 
-A light-weight music Discord bot using Orca for it's bot.
+A light-weight music Discord bot using Concord for its bot.
 
 It's easy to use and install.
 
@@ -8,7 +8,7 @@ It's easy to use and install.
 
 1 - Use git clone https://github.com/ThePedroo/C-Music-Discord-Bot.git
 
-2 - Install and build [Orca](https://github.com/cee-studio/orca).
+2 - Install and build [Concord](https://github.com/Cogmasters/concord).
 
 3 - Install clang / GCC.
 
@@ -36,12 +36,10 @@ make && ./main
  
  Project owner Discord tag: `Pedro.js#9446`
 
- Orca owners: `müller#1001` / `Icon from asterranaut (Solancia)#4228` / `segfault#8223`
-
- Orca support server: [Click here](https://discord.gg/9cHUyCc7rs)
+ Concord owner: `müller#1001`
   
- lib used for make requests: [Orca](https://github.com/cee-studio/orca)/[libcURL](https://curl.se/libcurl/c/)
+ lib used for make requests: [Concord](https://github.com/Cogmasters/concord)/[libcURL](https://curl.se/libcurl/c/)
 
- library for websockets: [Orca](https://github.com/cee-studio/orca)
+ library for websockets: [Concord](https://github.com/Cogmasters/concord)
 
- JSON parse lib: [cJSON](https://github.com/DaveGamble/cJSON)
+ JSON parse lib: [cJSON](https://github.com/lcsmuller/jsmn-find)

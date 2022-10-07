@@ -420,9 +420,9 @@ void on_message(struct discord *client, const struct discord_message *message) {
         int rounded = (int)(lengthFloat < 0 ? (lengthFloat - 0.5) : (lengthFloat + 0.5));
 
         if ((rounded / 1000) % 60 > 10) {
-          snprintf(descriptionEmbed, sizeof(descriptionEmbed), "Ok, tocando música agora!\n<:Info:772480355293986826> | Autor: `%s`\n:musical_note: | Nome: `%s`\n<:Cooldown:735255003161165915> | Tempo: `%d:%d`", author, title, ((int)(lengthFloat < 0 ? (lengthFloat - 0.5) : (lengthFloat + 0.5)) / 1000 / 60) << 0, (rounded / 1000) % 60);
+          snprintf(descriptionEmbed, sizeof(descriptionEmbed), "Ok, playing the song NOW!\n:person_tipping_hand: | Author: `%s`\n:musical_note: | Name: `%s`\n:stopwatch:  | Time: `%d:%d`", author, title, ((int)(lengthFloat < 0 ? (lengthFloat - 0.5) : (lengthFloat + 0.5)) / 1000 / 60) << 0, (rounded / 1000) % 60);
         } else {
-          snprintf(descriptionEmbed, sizeof(descriptionEmbed), "Ok, tocando música agora!\n<:Info:772480355293986826> | Autor: `%s`\n:musical_note: | Nome: `%s`\n<:Cooldown:735255003161165915> | Tempo: `%d:0%d`", author, title, ((int)(lengthFloat < 0 ? (lengthFloat - 0.5) : (lengthFloat + 0.5)) / 1000 / 60) << 0, (rounded / 1000) % 60);
+          snprintf(descriptionEmbed, sizeof(descriptionEmbed), "Ok, playing the song NOW!!\n:person_tipping_hand:  | Author: `%s`\n:musical_note: | Name: `%s`\n:stopwatch:  | Time: `%d:0%d`", author, title, ((int)(lengthFloat < 0 ? (lengthFloat - 0.5) : (lengthFloat + 0.5)) / 1000 / 60) << 0, (rounded / 1000) % 60);
         }
 
         struct discord_embed embed[] = {

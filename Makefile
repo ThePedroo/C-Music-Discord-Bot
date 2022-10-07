@@ -11,5 +11,3 @@ $(MAIN): $(MAIN).c
 
 clean:
 	rm -rf $(MAIN)
-	rm -rf $(MAIN)
-	rm -rf $(OBJDIR)

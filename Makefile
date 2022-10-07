@@ -1,34 +1,15 @@
 CC ?= clang
 
-SRCDIR := src
-OBJDIR := obj
-INCLUDEDIR := include
-
-SRC := $(wildcard $(SRCDIR)/*.c $(SRCDIR)/**/*.c)
-OBJS := $(SRC:$(SRCDIR)/%.c=$(OBJDIR)/%.o)
-
 MAIN := main
+EXECUTABLE_FILE_NAME := ConcordBot
 
-CFLAGS := -pthread -Wall -Wextra -Wpedantic -O3 -I$(INCLUDEDIR)
+CFLAGS := -pthread -Wall -Wextra -Wpedantic -O2
 LDFLAGS := -ldiscord -lcurl -lsqlite3
 
-$(OBJDIR)/%.o: $(SRCDIR)/%.c
-	$(CC) $(CFLAGS) -c -o $@ $< $(LDFLAGS)
-
-all: $(MAIN)
-
-$(MAIN): $(MAIN).c $(OBJS)
-	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
-
-$(OBJS): | $(OBJDIR)
-
-$(OBJDIR):
-	mkdir -p $(dir $(OBJS))
-
-echo:
-	@ echo SRC: $(SRC)
-	@ echo OBJS: $(OBJS)
+$(MAIN): $(MAIN).c
+	$(CC) $(CFLAGS) -o $(EXECUTABLE_FILE_NAME) $^ $(LDFLAGS)
 
 clean:
+	rm -rf $(MAIN)
 	rm -rf $(MAIN)
 	rm -rf $(OBJDIR)

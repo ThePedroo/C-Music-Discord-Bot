@@ -8,4 +8,4 @@ USER discordbot
 
 COPY . .
 
-CMD [ "clang" "main.c" "-o" "main.out" "-Wall" "-Wextra" "-Werror" "-g" "-pthread" "-ldiscord" "-lcurl" "-lpthread" "-lsqlite3" "&&" "./main.out" ]
+CMD [ "clang" "main.c" "-o" "ConcordBot" "-Wall" "-Wextra" "-Werror" "-g" "-ldiscord" "-lcurl" "-lsqlite3" "&&" "./ConcordBot" ]

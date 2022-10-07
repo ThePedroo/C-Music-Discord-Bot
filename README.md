@@ -4,7 +4,7 @@ A light-weight music Discord bot using Concord.
 
 # How to download and use it?
 
-* 1 - Use git clone https://github.com/ThePedroo/C-Music-Discord-Bot.git
+* 1 - Use `git clone https://github.com/ThePedroo/C-Music-Discord-Bot.git` to get the bot files.
 * 2 - Install clang / GCC.
 * 3 - Install and build [Concord](https://github.com/Cogmasters/concord).
 * 4 - Edit config.json with your TOKEN.

@@ -23,6 +23,7 @@ The bot is probably online, use .play <music> and feel free to listen to your fa
  
  * Project owner Discord tag: `Pedro.js#9446`
  * Concord owner: `müller#1001`
+ * Concord support server: [Discord](https://discord.gg/YcaK3puy49)
  * lib used for make requests: [libcURL](https://curl.se/libcurl/c/)
  * library for websockets: [Concord](https://github.com/Cogmasters/concord)
  * JSON parse lib: [jsmn-find](https://github.com/lcsmuller/jsmn-find)

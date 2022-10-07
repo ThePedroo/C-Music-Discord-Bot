@@ -204,6 +204,7 @@ void on_message(struct discord *client, const struct discord_message *message) {
       
       if (sqlite3_close(db) != SQLITE_OK) {
         log_fatal("[SQLITE] Failed to close sqlite db. [%s]", sqlite3_errmsg(db));
+        return;
       }
       return;
     }
@@ -241,6 +242,7 @@ void on_message(struct discord *client, const struct discord_message *message) {
 
         if (sqlite3_close(db) != SQLITE_OK) {
           log_fatal("[SQLITE] Failed to close sqlite db. [%s]", sqlite3_errmsg(db));
+          return;
         }
 
         struct discord_embed embed[] = {
@@ -473,6 +475,7 @@ void on_message(struct discord *client, const struct discord_message *message) {
           log_fatal("[SYSTEM] Something went wrong while creating the guild_channels table. [%s]", msgErr);
           if (sqlite3_close(db) != SQLITE_OK) {
             log_fatal("[SQLITE] Failed to close sqlite db. [%s]", sqlite3_errmsg(db));
+            return;
           }
           return;
         }
@@ -486,6 +489,7 @@ void on_message(struct discord *client, const struct discord_message *message) {
           log_fatal("[SQLITE] Something went wrong while inserting values into guild_channels table. [%s]", msgErr);
           if (sqlite3_close(db) != SQLITE_OK) {
             log_fatal("[SQLITE] Failed to close sqlite db. [%s]", sqlite3_errmsg(db));
+            return;
           }
           return;
         } else {
@@ -494,6 +498,7 @@ void on_message(struct discord *client, const struct discord_message *message) {
 
         if (sqlite3_close(db) != SQLITE_OK) {
           log_fatal("[SQLITE] Failed to close sqlite db. [%s]", sqlite3_errmsg(db));
+          return;
         }
       }
     } else {
@@ -504,6 +509,7 @@ void on_message(struct discord *client, const struct discord_message *message) {
       sqlite3_free(query);
       if (sqlite3_close(db) != SQLITE_OK) {
         log_fatal("[SQLITE] Failed to close sqlite db. [%s]", sqlite3_errmsg(db));
+        return;
       }
 
       struct discord_embed embed[] = {
@@ -614,6 +620,7 @@ void on_text(void *data, struct websockets *ws, struct ws_info *info, const char
         log_fatal("[SQLITE] Error when opening the db file. [%s]", sqlite3_errmsg(db));
         if (sqlite3_close(db) != SQLITE_OK) {
           log_fatal("[SQLITE] Failed to close sqlite db. [%s]", sqlite3_errmsg(db));
+          return;
         }
         return;
       }
@@ -630,6 +637,7 @@ void on_text(void *data, struct websockets *ws, struct ws_info *info, const char
         log_error("[SQLITE] Error while trying to access guild_channels table. [%s]", sqlite3_errmsg(db));
         if (sqlite3_close(db) != SQLITE_OK) {
           log_fatal("[SQLITE] Failed to close sqlite db. [%s]", sqlite3_errmsg(db));
+          return;
         }
         return;
       } else {
@@ -668,6 +676,7 @@ void on_text(void *data, struct websockets *ws, struct ws_info *info, const char
       }
       if (sqlite3_close(db) != SQLITE_OK) {
         log_fatal("[SQLITE] Failed to close sqlite db. [%s]", sqlite3_errmsg(db));
+        return;
       }
     }
   }
@@ -683,6 +692,7 @@ enum discord_event_scheduler scheduler(struct discord *client, const char data[]
         log_fatal("[SQLITE] Error when opening the db file. [%s]", sqlite3_errmsg(db));
         if (sqlite3_close(db) != SQLITE_OK) {
           log_fatal("[SQLITE] Failed to close sqlite db. [%s]", sqlite3_errmsg(db));
+          return DISCORD_EVENT_IGNORE;
         }
         return DISCORD_EVENT_IGNORE;
       }
@@ -698,6 +708,7 @@ enum discord_event_scheduler scheduler(struct discord *client, const char data[]
         log_fatal("[SYSTEM] Something went wrong while creating user_voice table. [%s]", msgErr);
         if (sqlite3_close(db) != SQLITE_OK) {
           log_fatal("[SQLITE] Failed to close sqlite db. [%s]", sqlite3_errmsg(db));
+          return DISCORD_EVENT_IGNORE;
         }
         return DISCORD_EVENT_IGNORE;
       }
@@ -712,6 +723,7 @@ enum discord_event_scheduler scheduler(struct discord *client, const char data[]
         log_error("[JSMNF] Failed to parse JSON.");
         if (sqlite3_close(db) != SQLITE_OK) {
           log_fatal("[SQLITE] Failed to close sqlite db. [%s]", sqlite3_errmsg(db));
+          return DISCORD_EVENT_IGNORE;
         }
         return DISCORD_EVENT_IGNORE;
       }
@@ -726,6 +738,7 @@ enum discord_event_scheduler scheduler(struct discord *client, const char data[]
         log_error("[JSMNF] Failed to load JSMNF.");
         if (sqlite3_close(db) != SQLITE_OK) {
           log_fatal("[SQLITE] Failed to close sqlite db. [%s]", sqlite3_errmsg(db));
+          return DISCORD_EVENT_IGNORE;
         }
         return DISCORD_EVENT_IGNORE;
       }
@@ -736,6 +749,7 @@ enum discord_event_scheduler scheduler(struct discord *client, const char data[]
         log_error("[JSMNF] Failed to find guild_id.");
         if (sqlite3_close(db) != SQLITE_OK) {
           log_fatal("[SQLITE] Failed to close sqlite db. [%s]", sqlite3_errmsg(db));
+          return DISCORD_EVENT_IGNORE;
         }
         return DISCORD_EVENT_IGNORE;
       }
@@ -746,6 +760,7 @@ enum discord_event_scheduler scheduler(struct discord *client, const char data[]
         log_error("[JSMNF] Failed to find user_id.");
         if (sqlite3_close(db) != SQLITE_OK) {
           log_fatal("[SQLITE] Failed to close sqlite db. [%s]", sqlite3_errmsg(db));
+          return DISCORD_EVENT_IGNORE;
         }
         return DISCORD_EVENT_IGNORE;
       }
@@ -758,6 +773,7 @@ enum discord_event_scheduler scheduler(struct discord *client, const char data[]
         log_error("[JSMNF] Failed to find channel_id.");
         if (sqlite3_close(db) != SQLITE_OK) {
           log_fatal("[SQLITE] Failed to close sqlite db. [%s]", sqlite3_errmsg(db));
+          return DISCORD_EVENT_IGNORE;
         }
         return DISCORD_EVENT_IGNORE;
       } else {
@@ -771,6 +787,7 @@ enum discord_event_scheduler scheduler(struct discord *client, const char data[]
             log_fatal("[SYSTEM] Something went wrong while deleting user_voice table from user_id. [%s]", msgErr);
             if (sqlite3_close(db) != SQLITE_OK) {
               log_fatal("[SQLITE] Failed to close sqlite db. [%s]", sqlite3_errmsg(db));
+              return DISCORD_EVENT_IGNORE;
             }
             return DISCORD_EVENT_IGNORE;
           } else {
@@ -789,6 +806,7 @@ enum discord_event_scheduler scheduler(struct discord *client, const char data[]
         log_error("[JSMNF] Failed to find session_id.");
         if (sqlite3_close(db) != SQLITE_OK) {
           log_fatal("[SQLITE] Failed to close sqlite db. [%s]", sqlite3_errmsg(db));
+          return DISCORD_EVENT_IGNORE;
         }
         return DISCORD_EVENT_IGNORE;
       }
@@ -813,6 +831,7 @@ enum discord_event_scheduler scheduler(struct discord *client, const char data[]
           log_fatal("[SYSTEM] Something went wrong while creating table guild_voice. [%s]", msgErr);
           if (sqlite3_close(db) != SQLITE_OK) {
             log_fatal("[SQLITE] Failed to close sqlite db. [%s]", sqlite3_errmsg(db));
+            return DISCORD_EVENT_IGNORE;
           }
           return DISCORD_EVENT_IGNORE;
         }
@@ -824,6 +843,7 @@ enum discord_event_scheduler scheduler(struct discord *client, const char data[]
           log_fatal("[SYSTEM] Something went wrong while deleting guild_voice table from guild_id. [%s]", msgErr);
           if (sqlite3_close(db) != SQLITE_OK) {
             log_fatal("[SQLITE] Failed to close sqlite db. [%s]", sqlite3_errmsg(db));
+            return DISCORD_EVENT_IGNORE;
           }
           return DISCORD_EVENT_IGNORE;
         } else {
@@ -841,6 +861,7 @@ enum discord_event_scheduler scheduler(struct discord *client, const char data[]
           log_fatal("[SQLITE] Something went wrong while inserting values into guild_voice table. [%s]", msgErr);
           if (sqlite3_close(db) != SQLITE_OK) {
             log_fatal("[SQLITE] Failed to close sqlite db. [%s]", sqlite3_errmsg(db));
+            return DISCORD_EVENT_IGNORE;
           }
           return DISCORD_EVENT_IGNORE;
         } else {
@@ -848,6 +869,7 @@ enum discord_event_scheduler scheduler(struct discord *client, const char data[]
         }
         if (sqlite3_close(db) != SQLITE_OK) {
           log_fatal("[SQLITE] Failed to close sqlite db. [%s]", sqlite3_errmsg(db));
+          return DISCORD_EVENT_IGNORE;
         }
         return DISCORD_EVENT_IGNORE;
       }
@@ -862,6 +884,7 @@ enum discord_event_scheduler scheduler(struct discord *client, const char data[]
           log_fatal("[SYSTEM] Something went wrong while deleting user_voice table from user_id. [%s]", msgErr);
           if (sqlite3_close(db) != SQLITE_OK) {
             log_fatal("[SQLITE] Failed to close sqlite db. [%s]", sqlite3_errmsg(db));
+            return DISCORD_EVENT_IGNORE;
           }
           return DISCORD_EVENT_IGNORE;
         } else {
@@ -879,6 +902,7 @@ enum discord_event_scheduler scheduler(struct discord *client, const char data[]
           log_fatal("[SQLITE] Something went wrong while inserting values into user_voice table. [%s]", msgErr);
           if (sqlite3_close(db) != SQLITE_OK) {
             log_fatal("[SQLITE] Failed to close sqlite db. [%s]", sqlite3_errmsg(db));
+            return DISCORD_EVENT_IGNORE;
           }
           return DISCORD_EVENT_IGNORE;
         } else {
@@ -887,11 +911,13 @@ enum discord_event_scheduler scheduler(struct discord *client, const char data[]
 
         if (sqlite3_close(db) != SQLITE_OK) {
           log_fatal("[SQLITE] Failed to close sqlite db. [%s]", sqlite3_errmsg(db));
+          return DISCORD_EVENT_IGNORE;
         }
       } else {
         log_fatal("[JSMNF] Unable to find a VCI. [%s]", data);
         if (sqlite3_close(db) != SQLITE_OK) {
           log_fatal("[SQLITE] Failed to close sqlite db. [%s]", sqlite3_errmsg(db));
+          return DISCORD_EVENT_IGNORE;
         }
         return DISCORD_EVENT_IGNORE;
       }
@@ -904,6 +930,7 @@ enum discord_event_scheduler scheduler(struct discord *client, const char data[]
         log_fatal("[SQLITE] Error when opening the db file. [%s]", sqlite3_errmsg(db));
         if (sqlite3_close(db) != SQLITE_OK) {
           log_fatal("[SQLITE] Failed to close sqlite db. [%s]", sqlite3_errmsg(db));
+          return DISCORD_EVENT_IGNORE;
         }
         return DISCORD_EVENT_IGNORE;
       }
@@ -918,6 +945,7 @@ enum discord_event_scheduler scheduler(struct discord *client, const char data[]
         log_error("[JSMNF] Failed to parse JSON.");
         if (sqlite3_close(db) != SQLITE_OK) {
           log_fatal("[SQLITE] Failed to close sqlite db. [%s]", sqlite3_errmsg(db));
+          return DISCORD_EVENT_IGNORE;
         }
         return DISCORD_EVENT_IGNORE;
       }
@@ -932,6 +960,7 @@ enum discord_event_scheduler scheduler(struct discord *client, const char data[]
         log_error("[JSMNF] Failed to load JSMNF.");
         if (sqlite3_close(db) != SQLITE_OK) {
           log_fatal("[SQLITE] Failed to close sqlite db. [%s]", sqlite3_errmsg(db));
+          return DISCORD_EVENT_IGNORE;
         }
         return DISCORD_EVENT_IGNORE;
       }
@@ -942,6 +971,7 @@ enum discord_event_scheduler scheduler(struct discord *client, const char data[]
         log_error("[JSMNF] Failed to find guild_id.");
         if (sqlite3_close(db) != SQLITE_OK) {
           log_fatal("[SQLITE] Failed to close sqlite db. [%s]", sqlite3_errmsg(db));
+          return DISCORD_EVENT_IGNORE;
         }
         return DISCORD_EVENT_IGNORE;
       }
@@ -958,6 +988,7 @@ enum discord_event_scheduler scheduler(struct discord *client, const char data[]
         log_fatal("[SQLITE] Error while trying to access guild_voice table. [%s]", sqlite3_errmsg(db));
         if (sqlite3_close(db) != SQLITE_OK) {
           log_fatal("[SQLITE] Failed to close sqlite db. [%s]", sqlite3_errmsg(db));
+          return DISCORD_EVENT_IGNORE;
         }
         return DISCORD_EVENT_IGNORE;
       } else {
@@ -979,6 +1010,7 @@ enum discord_event_scheduler scheduler(struct discord *client, const char data[]
       }
       if (sqlite3_close(db) != SQLITE_OK) {
         log_fatal("[SQLITE] Failed to close sqlite db. [%s]", sqlite3_errmsg(db));
+        return DISCORD_EVENT_IGNORE;
       }
     } return DISCORD_EVENT_IGNORE;
     default:

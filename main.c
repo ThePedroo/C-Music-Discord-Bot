@@ -14,9 +14,9 @@
 
 static struct websockets *g_ws;
 
-char lavalinkNodeURL[128] = "example.com"; // Remember, if the Lavalink node does not have SSL, please change in line 1007 and 277 wss:// to ws:// and https:// to http://
-char lavalinkNodePasswd[128] = "SomeWeirdAndNotSecurePasswd";
-char botID[32] = "1231231232132311321";
+char lavaHostname[256];
+char lavaPasswd[128];
+char botID[32];
 
 struct memory {
   char *body;
@@ -340,7 +340,7 @@ void on_message(struct discord *client, const struct discord_message *message) {
 
       char lavaURL[1024];
   
-      snprintf(lavaURL, sizeof(lavaURL), "https://%s/loadtracks?identifier=", lavalinkNodeURL);
+      snprintf(lavaURL, sizeof(lavaURL), "https://%s/loadtracks?identifier=", lavaHostname);
 
       if (0 == strncmp(music, "https://", strlen("https://"))) {
         strncat(lavaURL, musicSearchEncoded, sizeof(lavaURL) - 1);
@@ -371,7 +371,7 @@ void on_message(struct discord *client, const struct discord_message *message) {
         }
         
         char AuthorizationH[256];
-        snprintf(AuthorizationH, sizeof(AuthorizationH), "Authorization: %s", lavalinkNodePasswd);
+        snprintf(AuthorizationH, sizeof(AuthorizationH), "Authorization: %s", lavaPasswd);
 
         struct curl_slist *chunk = NULL;
         chunk = curl_slist_append(chunk, AuthorizationH);
@@ -1053,30 +1053,7 @@ enum discord_event_scheduler scheduler(struct discord *client, const char data[]
 }
 
 int main () {
-  char botTOKEN[128]; int err;
-
-  printf("Hi. This is a xxx pre-compiled version of C Music Discord BOT.\nAll information asked here will not be shared (only with Discord, for sure) with no one.\nBOT Token: ");
-  err = scanf("%s", botTOKEN);
-  if (!err) {
-    log_fatal("[SYSTEM] Error while executing function scanf.");
-  }
-  printf("BOT ID: ");
-  err = scanf("%s", botID);
-  if (!err) {
-    log_fatal("[SYSTEM] Error while executing function scanf.");
-  }
-  printf("Lavalink node URL: ");
-  err = scanf("%s", lavalinkNodeURL);
-  if (!err) {
-    log_fatal("[SYSTEM] Error while executing function scanf.");
-  }
-  printf("Lavalink node password: ");
-  err = scanf("%s", lavalinkNodePasswd);
-  if (!err) {
-    log_fatal("[SYSTEM] Error while executing function scanf.");
-  }
-
-  struct discord *client = discord_init(botTOKEN);
+  struct discord *client = discord_config_init("config.json");
 
   // WEBSOCKET
 
@@ -1089,15 +1066,22 @@ int main () {
 
   CURLM *mhandle = curl_multi_init();
   g_ws = ws_init(&cbs, mhandle, NULL);
-  
-  char lNAWss[256];
-  
-  snprintf(lNAWss, sizeof(lNAWss), "wss://%s", lavalinkNodeURL);
-  ws_set_url(g_ws, lNAWss, NULL);
+
+  struct ccord_szbuf_readonly value = discord_config_get_field(client, (char *[2]){ "lavalink", "hostname" }, 2);
+  snprintf(lavaHostname, sizeof(lavaHostname), "wss://%.*s", (int)value.size, value.start);
+
+  ws_set_url(g_ws, lavaHostname, NULL);
 
   ws_start(g_ws);
 
-  ws_add_header(g_ws, "Authorization", lavalinkNodePasswd);
+  value = discord_config_get_field(client, (char *[2]){ "lavalink", "password" }, 2);
+  snprintf(lavaPasswd, sizeof(lavaPasswd), "%.*s", (int)value.size, value.start);
+
+  const struct discord_user *bot = discord_get_self(client);
+
+  snprintf(botID, sizeof(botID), "%ld", bot->id);
+
+  ws_add_header(g_ws, "Authorization", botID);
   ws_add_header(g_ws, "Num-Shards", "1"); // You may want to change this.
   ws_add_header(g_ws, "User-Id", botID);
   ws_add_header(g_ws, "Client-Name", "MusicBotWithConcord");

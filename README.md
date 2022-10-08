@@ -4,20 +4,28 @@ A light-weight music Discord bot using Concord.
 
 # How to download and use it?
 
+There are currently two ways of using it. Compiling the source code and using it, or using the pre-compiled version
+
+## Compiling by yourself
+
 * 1 - Use `git clone https://github.com/ThePedroo/C-Music-Discord-Bot.git` to get the bot files.
 * 2 - Install clang / GCC.
 * 3 - Install and build [Concord](https://github.com/Cogmasters/concord).
-* 4 - Edit config.json with your TOKEN.
-* 5 - Fill Lavalink Node informations in main.c
 * Info. Dont't have a [Lavalink](https://github.com/freyacodes/Lavalink) node? Setup it on [replit.com](https://replit.com/).
-* 6 - Install sqlite3: `sudo apt install sqlite3`
+* 4 - Install sqlite3: `sudo apt install sqlite3`
 
 If you did everything correct, use: 
 ```
 make && ./ConcordBot
 ```
 
-The bot is probably online, use .play <music> and feel free to listen to your favorite songs.
+Done, now you will have a compiled version of the music bot for your architecture. :)
+
+## Pre-compiled 
+
+* 1 - Go to Github releases and download the `Concord-x86_64` file, after it run it.
+
+Done! Yeah, it's that simple to use it. ^^
   
 # Information
  

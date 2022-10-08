@@ -86,7 +86,7 @@ void on_message(struct discord *client, const struct discord_message *message) {
     }
 
     char* endptr = NULL;
-    long longVolume = strtol(volume, &endptr, 10);
+    long lVolume = strtol(volume, &endptr, 10);
 
     if (*endptr != '\0') {
       struct discord_embed embed[] = {
@@ -119,7 +119,7 @@ void on_message(struct discord *client, const struct discord_message *message) {
       return;
     }
 
-    if (longVolume < 0 || longVolume > 100) {
+    if (lVolume < 0 || lVolume > 100) {
       struct discord_embed embed[] = {
         {
           .description = "<a:Noo:757568484086382622> | Sorry, the volume must be a number from 0 to 100.",

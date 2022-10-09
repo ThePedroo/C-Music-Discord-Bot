@@ -33,7 +33,6 @@ void on_cycle(struct discord *client) {
 
 void on_text(void *data, struct websockets *ws, struct ws_info *info, const char *text, size_t len) {
   (void) ws; (void) info;
-  printf("%s\n", text);
 
   jsmn_parser parser;
   jsmntok_t tokens[1024];
@@ -144,8 +143,6 @@ void on_text(void *data, struct websockets *ws, struct ws_info *info, const char
         log_fatal("[SQLITE] Failed to close sqlite db. [%s]", sqlite3_errmsg(db));
       }
     }
-
-    printf("%s\n", Type);
   }
 }
 

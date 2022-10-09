@@ -16,6 +16,6 @@
   },
   "lavalink": {
     "hostname": "YOUR-LAVALINK-NODE-HOSTNAME",
-    "password": "OUR-LAVALINK-NODE-PASSWORD"
+    "password": "YOUR-LAVALINK-NODE-PASSWORD"
   }
 }

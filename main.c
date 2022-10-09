@@ -398,9 +398,6 @@ void on_message(struct discord *client, const struct discord_message *message) {
       }
 
       char lavaURL[1024];
-
-      printf("%s\n", lavaHostname);
-  
       snprintf(lavaURL, sizeof(lavaURL), "https://%s/loadtracks?identifier=", lavaHostname);
 
       if (0 == strncmp(music, "https://", strlen("https://"))) {

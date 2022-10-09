@@ -437,7 +437,6 @@ enum discord_event_scheduler scheduler(struct discord *client, const char data[]
         return DISCORD_EVENT_IGNORE;
       } else {
         char VUP[1024];
-
         snprintf(VUP, sizeof(VUP), "{\"op\":\"voiceUpdate\",\"guildId\":\"%.*s\",\"sessionId\":\"%s\",\"event\":%.*s}", (int)VGI->v.len, data + VGI->v.pos, sqlite3_column_text(stmt, 0), (int)size, data);
 
         if (sqlite3_finalize(stmt) != SQLITE_OK) {
@@ -445,12 +444,7 @@ enum discord_event_scheduler scheduler(struct discord *client, const char data[]
           return DISCORD_EVENT_IGNORE;
         }
 
-        if (ws_send_text(g_ws, NULL, VUP, strlen(VUP)) == false) {
-          log_fatal("[LIBCURL] Failed to send a voiceUpdate payload to Lavalink.");
-          return DISCORD_EVENT_IGNORE;
-        } else {
-          log_debug("[LIBCURL] Sent with success a voiceUpdate payload to Lavalink.");
-        }
+        sendPayload(VUP, "voiceUpdate")
       }
       if (sqlite3_close(db) != SQLITE_OK) {
         log_fatal("[SQLITE] Failed to close sqlite db. [%s]", sqlite3_errmsg(db));

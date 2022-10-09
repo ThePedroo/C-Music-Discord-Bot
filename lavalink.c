@@ -444,7 +444,7 @@ enum discord_event_scheduler scheduler(struct discord *client, const char data[]
           return DISCORD_EVENT_IGNORE;
         }
 
-        sendPayload(VUP, "voiceUpdate")
+        sendPayload(VUP, "voiceUpdate");
       }
       if (sqlite3_close(db) != SQLITE_OK) {
         log_fatal("[SQLITE] Failed to close sqlite db. [%s]", sqlite3_errmsg(db));

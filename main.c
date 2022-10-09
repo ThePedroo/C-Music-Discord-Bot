@@ -1081,7 +1081,7 @@ int main () {
 
   snprintf(botID, sizeof(botID), "%ld", bot->id);
 
-  ws_add_header(g_ws, "Authorization", botID);
+  ws_add_header(g_ws, "Authorization", lavaPasswd);
   ws_add_header(g_ws, "Num-Shards", "1"); // You may want to change this.
   ws_add_header(g_ws, "User-Id", botID);
   ws_add_header(g_ws, "Client-Name", "MusicBotWithConcord");

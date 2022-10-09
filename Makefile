@@ -1,13 +1,16 @@
 CC ?= clang
 
-MAIN := main
+MAIN := main.c
 EXECUTABLE_FILE_NAME := ConcordBot
 
-CFLAGS := -pthread -Wall -Wextra -Wpedantic -O2
-LDFLAGS := -ldiscord -lcurl -lsqlite3
+CFLAGS := -Wall -Wextra -Wpedantic -Ofast
+LDFLAGS := -ldiscord -lcurl -lsqlite3 -pthread
 
-$(MAIN): $(MAIN).c
-	$(CC) $(CFLAGS) -o $(EXECUTABLE_FILE_NAME) $^ $(LDFLAGS)
+all:
+	$(CC) $(CFLAGS) -o $(EXECUTABLE_FILE_NAME) $(MAIN) $^ $(LDFLAGS)
+
+debug:
+	CFLAGS="-O0 -g" $(CC) $(CFLAGS) -o $(EXECUTABLE_FILE_NAME) $(MAIN) $^ $(LDFLAGS)
 
 clean:
 	rm -rf $(MAIN)

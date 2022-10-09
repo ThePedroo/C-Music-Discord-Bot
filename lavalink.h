@@ -18,4 +18,6 @@ void on_text(void *data, struct websockets *ws, struct ws_info *info, const char
 
 enum discord_event_scheduler scheduler(struct discord *client, const char data[], size_t size, enum discord_gateway_events event);
 
+void sendPayload(char payload[], char *payloadOP);
+
 #endif

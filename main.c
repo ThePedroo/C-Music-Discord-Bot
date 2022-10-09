@@ -49,7 +49,7 @@ void on_message(struct discord *client, const struct discord_message *message) {
   if (message->author->bot) return;
   if (0 == strcmp(message->content, ".resume")) {
     char pJ[128];
-    snprintf(pJ, sizeof(pJ), "{\"op\":\"pause\",\"guildId\":\"%"PRIu64"\",\"pause\":false}", message->guild_id, volume);
+    snprintf(pJ, sizeof(pJ), "{\"op\":\"pause\",\"guildId\":\"%"PRIu64"\",\"pause\":false}", message->guild_id);
 
     sendPayload(pJ, "pause");
 
@@ -217,7 +217,7 @@ void on_message(struct discord *client, const struct discord_message *message) {
     char pJ[128];
     snprintf(pJ, sizeof(pJ), "{\"op\":\"volume\",\"guildId\":\"%"PRIu64"\",\"volume\":%s}", message->guild_id, volume);
 
-    sendPayload(pJ, "volume")
+    sendPayload(pJ, "volume");
 
     struct discord_embed embed[] = {
       {

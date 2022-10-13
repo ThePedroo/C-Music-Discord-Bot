@@ -225,6 +225,14 @@ enum discord_event_scheduler scheduler(struct discord *client, const char data[]
         return DISCORD_EVENT_IGNORE;
       }
 
+      // WILL NEED UPDATE
+      const struct discord_user *bot = discord_get_self(client);
+
+      char userID[32]; char botID[32];
+      snprintf(userID, sizeof(userID), "%"PRIu64"", bot->id);
+      snprintf(botID, sizeof(botID), "%.*s", (int)VUI->v.len, data + VUI->v.pos);
+      // WILL NEED UPDATE
+
       jsmnf_pair *VCI = jsmnf_find(pairs, data, "channel_id", strlen("channel_id"));
 
       char channel_id[32];
@@ -235,8 +243,33 @@ enum discord_event_scheduler scheduler(struct discord *client, const char data[]
           log_fatal("[SQLITE] Failed to close sqlite db. [%s]", sqlite3_errmsg(db));
         }
         return DISCORD_EVENT_IGNORE;
-      } else {
+      } else {  
         snprintf(channel_id, sizeof(channel_id), "%.*s", (int)VCI->v.len, data + VCI->v.pos);
+
+        if (0 == strcmp(userID, botID) && 0 == strcmp(channel_id, "null")) {
+          log_debug("[SYSTEM] The bot left the voice channel. Going to delete its session_id.");
+
+          char *query = sqlite3_mprintf("DELETE FROM guild_voice WHERE guild_id = %.*s;", (int)VGI->v.len, data + VGI->v.pos);
+          rc = sqlite3_exec(db, query, NULL, NULL, &msgErr);
+
+          if (rc != SQLITE_OK) {
+            log_fatal("[SYSTEM] Something went wrong while deleting guild_voice table from guild_id. [%s]", msgErr);
+            if (sqlite3_close(db) != SQLITE_OK) {
+              log_fatal("[SQLITE] Failed to close sqlite db. [%s]", sqlite3_errmsg(db));
+            }
+            return DISCORD_EVENT_IGNORE;
+          } else {
+            log_debug("[SYSTEM] Deleted guild_voice where guild_id = %.*s.", (int)VGI->v.len, data + VGI->v.pos);
+          }
+
+          sqlite3_free(query);
+
+          if (sqlite3_close(db) != SQLITE_OK) {
+            log_fatal("[SQLITE] Failed to close sqlite db. [%s]", sqlite3_errmsg(db));
+          }
+          return DISCORD_EVENT_IGNORE;
+        }
+
         if (0 == strcmp(channel_id, "null")) {
           log_debug("[SYSTEM] Someone left a voice channel, deleting user_voice table from the user if exists.");
           query = sqlite3_mprintf("DELETE FROM user_voice WHERE user_id = %.*s;", (int)VUI->v.len, data + VUI->v.pos);
@@ -267,14 +300,6 @@ enum discord_event_scheduler scheduler(struct discord *client, const char data[]
         }
         return DISCORD_EVENT_IGNORE;
       }
-
-      const struct discord_user *bot = discord_get_self(client);
-
-      // WILL NEED UPDATE
-      char userID[32]; char botID[32];
-      snprintf(userID, sizeof(userID), "%"PRIu64"", bot->id);
-      snprintf(botID, sizeof(botID), "%.*s", (int)VUI->v.len, data + VUI->v.pos);
-      // WILL NEED UPDATE
 
       if (0 == strcmp(userID, botID)) {
         log_debug("[SYSTEM] The bot joined the voice channel. Going to save its session_id.");

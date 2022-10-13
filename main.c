@@ -552,6 +552,10 @@ void on_message(struct discord *client, const struct discord_message *message) {
             .title = title,
             .url = url,
             .description = descriptionEmbed,
+            .image =
+              &(struct discord_embed_image){
+                .url = "https://raw.githubusercontent.com/Cogmasters/concord/master/docs/static/social-preview.png",
+              },
             .footer =
               &(struct discord_embed_footer){
                 .text = "Powered by Concord",

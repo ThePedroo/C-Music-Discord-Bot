@@ -47,181 +47,11 @@ void on_ready(struct discord *client, const struct discord_ready *event) {
 
 void on_message(struct discord *client, const struct discord_message *message) {
   if (message->author->bot) return;
-  if (0 == strcmp(message->content, ".resume")) {
-    char pJ[128];
-    snprintf(pJ, sizeof(pJ), "{\"op\":\"pause\",\"guildId\":\"%"PRIu64"\",\"pause\":false}", message->guild_id);
-
-    sendPayload(pJ, "pause");
-
+  if (0 == strcmp(message->content, ".help")) {
     struct discord_embed embed[] = {
       {
-        .description = "<a:yes:757568594841305149> | Okay, resuming current playback.",
-        .image =
-          &(struct discord_embed_image){
-            .url = "https://raw.githubusercontent.com/Cogmasters/concord/master/docs/static/social-preview.png",
-          },
-        .footer =
-          &(struct discord_embed_footer){
-            .text = "Powered by Concord",
-            .icon_url = "https://raw.githubusercontent.com/Cogmasters/concord/master/docs/static/concord-small.png",
-          },
-        .timestamp = discord_timestamp(client),
-        .color = 15615
-      }
-    };
-
-    struct discord_create_message params = {
-      .flags = 0,
-      .embeds =
-        &(struct discord_embeds){
-          .size = 1,
-          .array = embed,
-        },
-    };
-
-    discord_create_message(client, message->channel_id, &params, NULL);
-  }
-  if (0 == strcmp(message->content, ".pause")) {
-    char pJ[128];
-    snprintf(pJ, sizeof(pJ), "{\"op\":\"pause\",\"guildId\":\"%"PRIu64"\",\"pause\":true}", message->guild_id);
-
-    sendPayload(pJ, "pause");
-
-    struct discord_embed embed[] = {
-      {
-        .description = "<a:yes:757568594841305149> | Okay, pausing current playback.",
-        .image =
-          &(struct discord_embed_image){
-            .url = "https://raw.githubusercontent.com/Cogmasters/concord/master/docs/static/social-preview.png",
-          },
-        .footer =
-          &(struct discord_embed_footer){
-            .text = "Powered by Concord",
-            .icon_url = "https://raw.githubusercontent.com/Cogmasters/concord/master/docs/static/concord-small.png",
-          },
-        .timestamp = discord_timestamp(client),
-        .color = 15615
-      }
-    };
-
-    struct discord_create_message params = {
-      .flags = 0,
-      .embeds =
-        &(struct discord_embeds){
-          .size = 1,
-          .array = embed,
-        },
-    };
-
-    discord_create_message(client, message->channel_id, &params, NULL);
-  }
-  if (0 == strncmp(message->content, ".volume ", 8)) {
-    char *volume = message->content + strlen(".volume ");
-
-    if (!volume) {
-      struct discord_embed embed[] = {
-        {
-          .description = "<a:Noo:757568484086382622> | Sorry, you must put a volume number after the command.",
-          .image =
-            &(struct discord_embed_image){
-              .url = "https://raw.githubusercontent.com/Cogmasters/concord/master/docs/static/social-preview.png",
-            },
-          .footer =
-            &(struct discord_embed_footer){
-              .text = "Powered by Concord",
-              .icon_url = "https://raw.githubusercontent.com/Cogmasters/concord/master/docs/static/concord-small.png",
-            },
-          .timestamp = discord_timestamp(client),
-          .color = 16711680
-        }
-      };
-
-      struct discord_create_message params = {
-        .flags = 0,
-        .embeds =
-          &(struct discord_embeds){
-            .size = 1,
-            .array = embed,
-          },
-      };
-
-      discord_create_message(client, message->channel_id, &params, NULL);
-      return;
-    }
-
-    char *endptr = NULL;
-    long lVolume = strtol(volume, &endptr, 10);
-
-    if (*endptr != '\0') {
-      struct discord_embed embed[] = {
-        {
-          .description = "<a:Noo:757568484086382622> | Sorry, this is not a number, you must put a number from 0 to 100.",
-          .image =
-            &(struct discord_embed_image){
-              .url = "https://raw.githubusercontent.com/Cogmasters/concord/master/docs/static/social-preview.png",
-            },
-          .footer =
-            &(struct discord_embed_footer){
-              .text = "Powered by Concord",
-              .icon_url = "https://raw.githubusercontent.com/Cogmasters/concord/master/docs/static/concord-small.png",
-            },
-          .timestamp = discord_timestamp(client),
-          .color = 16711680
-        }
-      };
-
-      struct discord_create_message params = {
-        .flags = 0,
-        .embeds =
-          &(struct discord_embeds){
-            .size = 1,
-            .array = embed,
-          },
-      };
-
-      discord_create_message(client, message->channel_id, &params, NULL);
-      return;
-    }
-
-    if (lVolume < 0 || lVolume > 100) {
-      struct discord_embed embed[] = {
-        {
-          .description = "<a:Noo:757568484086382622> | Sorry, the volume must be a number from 0 to 100.",
-          .image =
-            &(struct discord_embed_image){
-              .url = "https://raw.githubusercontent.com/Cogmasters/concord/master/docs/static/social-preview.png",
-            },
-          .footer =
-            &(struct discord_embed_footer){
-              .text = "Powered by Concord",
-              .icon_url = "https://raw.githubusercontent.com/Cogmasters/concord/master/docs/static/concord-small.png",
-            },
-          .timestamp = discord_timestamp(client),
-          .color = 16711680
-        }
-      };
-
-      struct discord_create_message params = {
-        .flags = 0,
-        .embeds =
-          &(struct discord_embeds){
-            .size = 1,
-            .array = embed,
-          },
-      };
-
-      discord_create_message(client, message->channel_id, &params, NULL);
-      return;
-    }
-
-    char pJ[128];
-    snprintf(pJ, sizeof(pJ), "{\"op\":\"volume\",\"guildId\":\"%"PRIu64"\",\"volume\":%s}", message->guild_id, volume);
-
-    sendPayload(pJ, "volume");
-
-    struct discord_embed embed[] = {
-      {
-        .description = "<a:yes:757568594841305149> | Okay, the volume will be changed in some seconds.",
+        .title = "List of commands",
+        .description = "> `.botinfo` - Shows some of the information about the bot.\n> `.play [music]` - Starts playing a song.\n> `.bassbost (remove?)` - Adds or removes the bassbost effect.\n> `.nightcore (remove?)` - Adds or removes the nightcore effect.",
         .image =
           &(struct discord_embed_image){
             .url = "https://raw.githubusercontent.com/Cogmasters/concord/master/docs/static/social-preview.png",
@@ -285,6 +115,350 @@ void on_message(struct discord *client, const struct discord_message *message) {
     };
 
     discord_create_message(client, message->channel_id, &params, NULL);
+  }
+  if (0 == strcmp(message->content, ".resume")) {
+    char pJ[128];
+    snprintf(pJ, sizeof(pJ), "{\"op\":\"pause\",\"guildId\":\"%"PRIu64"\",\"pause\":false}", message->guild_id);
+
+    sendPayload(pJ, "pause");
+
+    struct discord_embed embed[] = {
+      {
+        .description = "Okay, resuming current playback.",
+        .image =
+          &(struct discord_embed_image){
+            .url = "https://raw.githubusercontent.com/Cogmasters/concord/master/docs/static/social-preview.png",
+          },
+        .footer =
+          &(struct discord_embed_footer){
+            .text = "Powered by Concord",
+            .icon_url = "https://raw.githubusercontent.com/Cogmasters/concord/master/docs/static/concord-small.png",
+          },
+        .timestamp = discord_timestamp(client),
+        .color = 15615
+      }
+    };
+
+    struct discord_create_message params = {
+      .flags = 0,
+      .embeds =
+        &(struct discord_embeds){
+          .size = 1,
+          .array = embed,
+        },
+    };
+
+    discord_create_message(client, message->channel_id, &params, NULL);
+  }
+  if (0 == strcmp(message->content, ".pause")) {
+    char pJ[128];
+    snprintf(pJ, sizeof(pJ), "{\"op\":\"pause\",\"guildId\":\"%"PRIu64"\",\"pause\":true}", message->guild_id);
+
+    sendPayload(pJ, "pause");
+
+    struct discord_embed embed[] = {
+      {
+        .description = "Okay, pausing current playback.",
+        .image =
+          &(struct discord_embed_image){
+            .url = "https://raw.githubusercontent.com/Cogmasters/concord/master/docs/static/social-preview.png",
+          },
+        .footer =
+          &(struct discord_embed_footer){
+            .text = "Powered by Concord",
+            .icon_url = "https://raw.githubusercontent.com/Cogmasters/concord/master/docs/static/concord-small.png",
+          },
+        .timestamp = discord_timestamp(client),
+        .color = 15615
+      }
+    };
+
+    struct discord_create_message params = {
+      .flags = 0,
+      .embeds =
+        &(struct discord_embeds){
+          .size = 1,
+          .array = embed,
+        },
+    };
+
+    discord_create_message(client, message->channel_id, &params, NULL);
+  }
+  if (0 == strncmp(message->content, ".volume ", 8)) {
+    char *volume = message->content + strlen(".volume ");
+
+    if (!volume) {
+      struct discord_embed embed[] = {
+        {
+          .description = "Sorry, you must put a volume number after the command.",
+          .image =
+            &(struct discord_embed_image){
+              .url = "https://raw.githubusercontent.com/Cogmasters/concord/master/docs/static/social-preview.png",
+            },
+          .footer =
+            &(struct discord_embed_footer){
+              .text = "Powered by Concord",
+              .icon_url = "https://raw.githubusercontent.com/Cogmasters/concord/master/docs/static/concord-small.png",
+            },
+          .timestamp = discord_timestamp(client),
+          .color = 16711680
+        }
+      };
+
+      struct discord_create_message params = {
+        .flags = 0,
+        .embeds =
+          &(struct discord_embeds){
+            .size = 1,
+            .array = embed,
+          },
+      };
+
+      discord_create_message(client, message->channel_id, &params, NULL);
+      return;
+    }
+
+    char *endptr = NULL;
+    long lVolume = strtol(volume, &endptr, 10);
+
+    if (*endptr != '\0') {
+      struct discord_embed embed[] = {
+        {
+          .description = "Sorry, this is not a number, you must put a number from 0 to 100.",
+          .image =
+            &(struct discord_embed_image){
+              .url = "https://raw.githubusercontent.com/Cogmasters/concord/master/docs/static/social-preview.png",
+            },
+          .footer =
+            &(struct discord_embed_footer){
+              .text = "Powered by Concord",
+              .icon_url = "https://raw.githubusercontent.com/Cogmasters/concord/master/docs/static/concord-small.png",
+            },
+          .timestamp = discord_timestamp(client),
+          .color = 16711680
+        }
+      };
+
+      struct discord_create_message params = {
+        .flags = 0,
+        .embeds =
+          &(struct discord_embeds){
+            .size = 1,
+            .array = embed,
+          },
+      };
+
+      discord_create_message(client, message->channel_id, &params, NULL);
+      return;
+    }
+
+    if (lVolume < 0 || lVolume > 100) {
+      struct discord_embed embed[] = {
+        {
+          .description = "Sorry, the volume must be a number from 0 to 100.",
+          .image =
+            &(struct discord_embed_image){
+              .url = "https://raw.githubusercontent.com/Cogmasters/concord/master/docs/static/social-preview.png",
+            },
+          .footer =
+            &(struct discord_embed_footer){
+              .text = "Powered by Concord",
+              .icon_url = "https://raw.githubusercontent.com/Cogmasters/concord/master/docs/static/concord-small.png",
+            },
+          .timestamp = discord_timestamp(client),
+          .color = 16711680
+        }
+      };
+
+      struct discord_create_message params = {
+        .flags = 0,
+        .embeds =
+          &(struct discord_embeds){
+            .size = 1,
+            .array = embed,
+          },
+      };
+
+      discord_create_message(client, message->channel_id, &params, NULL);
+      return;
+    }
+
+    char pJ[128];
+    snprintf(pJ, sizeof(pJ), "{\"op\":\"volume\",\"guildId\":\"%"PRIu64"\",\"volume\":%s}", message->guild_id, volume);
+
+    sendPayload(pJ, "volume");
+
+    struct discord_embed embed[] = {
+      {
+        .description = "Okay, the volume will be changed in some seconds.",
+        .image =
+          &(struct discord_embed_image){
+            .url = "https://raw.githubusercontent.com/Cogmasters/concord/master/docs/static/social-preview.png",
+          },
+        .footer =
+          &(struct discord_embed_footer){
+            .text = "Powered by Concord",
+            .icon_url = "https://raw.githubusercontent.com/Cogmasters/concord/master/docs/static/concord-small.png",
+          },
+        .timestamp = discord_timestamp(client),
+        .color = 15615
+      }
+    };
+
+    struct discord_create_message params = {
+      .flags = 0,
+      .embeds =
+        &(struct discord_embeds){
+          .size = 1,
+          .array = embed,
+        },
+    };
+
+    discord_create_message(client, message->channel_id, &params, NULL);
+  }
+  if (0 == strcmp(message->content, ".bassbost") || 0 == strncmp(".bassbost ", message->content, 10)) {
+    char *args = message->content + strlen(".bassbost ");
+
+    printf("ARGS: %s\n", args);
+
+    if (0 != strcmp(args, "remove")) {
+
+      char pJ[256];
+      snprintf(pJ, sizeof(pJ), "{\"op\":\"filters\",\"guildId\":%"PRIu64",\"equalizer\":[{\"band\":0,\"gain\":0.25},{\"band\":1,\"gain\":0.25},{\"band\":2,\"gain\":0.25}]}", message->guild_id);
+
+      sendPayload(pJ, "filters");
+
+      struct discord_embed embed[] = {
+        {
+          .description = "Okay, applying the bassbost effect, to remove, use `.bassbost remove`",
+          .image =
+            &(struct discord_embed_image){
+              .url = "https://raw.githubusercontent.com/Cogmasters/concord/master/docs/static/social-preview.png",
+            },
+          .footer =
+            &(struct discord_embed_footer){
+              .text = "Powered by Concord",
+              .icon_url = "https://raw.githubusercontent.com/Cogmasters/concord/master/docs/static/concord-small.png",
+            },
+          .timestamp = discord_timestamp(client),
+          .color = 15615
+        }
+      };
+
+      struct discord_create_message params = {
+        .flags = 0,
+        .embeds =
+          &(struct discord_embeds){
+            .size = 1,
+            .array = embed,
+          },
+      };
+
+      discord_create_message(client, message->channel_id, &params, NULL);
+    } else {
+      char pJ[256];
+      snprintf(pJ, sizeof(pJ), "{\"op\":\"filters\",\"guildId\":%"PRIu64"}", message->guild_id);
+
+      struct discord_embed embed[] = {
+        {
+          .description = "Okay, removing the bassbost effect, to apply again, use `.bassbost`",
+          .image =
+            &(struct discord_embed_image){
+              .url = "https://raw.githubusercontent.com/Cogmasters/concord/master/docs/static/social-preview.png",
+            },
+          .footer =
+            &(struct discord_embed_footer){
+              .text = "Powered by Concord",
+              .icon_url = "https://raw.githubusercontent.com/Cogmasters/concord/master/docs/static/concord-small.png",
+            },
+          .timestamp = discord_timestamp(client),
+          .color = 15615
+        }
+      };
+
+      struct discord_create_message params = {
+        .flags = 0,
+        .embeds =
+          &(struct discord_embeds){
+            .size = 1,
+            .array = embed,
+          },
+      };
+
+      discord_create_message(client, message->channel_id, &params, NULL);
+    }
+  }
+  if (0 == strcmp(message->content, ".nightcore") || 0 == strncmp(".nightcore ", message->content, 10)) {
+    char *args = message->content + strlen(".nightcore ");
+
+    if (0 != strcmp(args, "remove")) {
+
+      char pJ[256];
+      snprintf(pJ, sizeof(pJ), "{\"op\":\"filters\",\"guildId\":%"PRIu64",\"timescale\":{\"speed\":1.2999999523162842,\"pitch\":1.2999999523162842,\"rate\": 1}}", message->guild_id);
+
+      sendPayload(pJ, "filters");
+
+      struct discord_embed embed[] = {
+        {
+          .description = "Okay, applying the nightcore effect, to remove, use `.nightcore remove`",
+          .image =
+            &(struct discord_embed_image){
+              .url = "https://raw.githubusercontent.com/Cogmasters/concord/master/docs/static/social-preview.png",
+            },
+          .footer =
+            &(struct discord_embed_footer){
+              .text = "Powered by Concord",
+              .icon_url = "https://raw.githubusercontent.com/Cogmasters/concord/master/docs/static/concord-small.png",
+            },
+          .timestamp = discord_timestamp(client),
+          .color = 15615
+        }
+      };
+
+      struct discord_create_message params = {
+        .flags = 0,
+        .embeds =
+          &(struct discord_embeds){
+            .size = 1,
+            .array = embed,
+          },
+      };
+
+      discord_create_message(client, message->channel_id, &params, NULL);
+    } else {
+      char pJ[256];
+      snprintf(pJ, sizeof(pJ), "{\"op\":\"filters\",\"guildId\":%"PRIu64"}", message->guild_id);
+
+      sendPayload(pJ, "filters");
+
+      struct discord_embed embed[] = {
+        {
+          .description = "Okay, removing the nightcore effect, to apply again, use `.nightcore`",
+          .image =
+            &(struct discord_embed_image){
+              .url = "https://raw.githubusercontent.com/Cogmasters/concord/master/docs/static/social-preview.png",
+            },
+          .footer =
+            &(struct discord_embed_footer){
+              .text = "Powered by Concord",
+              .icon_url = "https://raw.githubusercontent.com/Cogmasters/concord/master/docs/static/concord-small.png",
+            },
+          .timestamp = discord_timestamp(client),
+          .color = 15615
+        }
+      };
+
+      struct discord_create_message params = {
+        .flags = 0,
+        .embeds =
+          &(struct discord_embeds){
+            .size = 1,
+            .array = embed,
+          },
+      };
+
+      discord_create_message(client, message->channel_id, &params, NULL);
+    }
   }
   if (0 == strncmp(".play ", message->content, 6)) {
     char *music = message->content + strlen(".play ");

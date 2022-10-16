@@ -26,6 +26,10 @@ Done, now you will have a compiled version of the music bot for your architectur
 * 1 - Go to Github releases and download the `Concord-x86_64` file, after it run it.
 
 Done! Yeah, it's that simple to use it. ^^
+
+## Using the bot
+
+You can start using it by using `.play [music]`, and to see more commands you can use `.help`.
   
 # Information
  

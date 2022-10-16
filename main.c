@@ -47,6 +47,38 @@ void on_ready(struct discord *client, const struct discord_ready *event) {
 
 void on_message(struct discord *client, const struct discord_message *message) {
   if (message->author->bot) return;
+  if (0 == strcmp(message->content, ".ping")) {
+    char description[128];
+    snprintf(description, sizeof(description), "The websocket ping is: %dms.", discord_get_ping(client));
+
+    struct discord_embed embed[] = {
+      {
+        .description = description,
+        .image =
+          &(struct discord_embed_image){
+            .url = "https://raw.githubusercontent.com/Cogmasters/concord/master/docs/static/social-preview.png",
+          },
+        .footer =
+          &(struct discord_embed_footer){
+            .text = "Powered by Concord",
+            .icon_url = "https://raw.githubusercontent.com/Cogmasters/concord/master/docs/static/concord-small.png",
+          },
+        .timestamp = discord_timestamp(client),
+        .color = 15615
+      }
+    };
+
+    struct discord_create_message params = {
+      .flags = 0,
+      .embeds =
+        &(struct discord_embeds){
+          .size = 1,
+          .array = embed,
+        },
+    };
+
+    discord_create_message(client, message->channel_id, &params, NULL);
+  }
   if (0 == strcmp(message->content, ".help")) {
     struct discord_embed embed[] = {
       {
@@ -863,7 +895,7 @@ int main () {
 
   const struct discord_user *bot = discord_get_self(client);
 
-  snprintf(botID, sizeof(botID), "%ld", bot->id);
+  snprintf(botID, sizeof(botID), "%"PRIu64"", bot->id);
 
   ws_add_header(g_ws, "Authorization", lavaPasswd);
   ws_add_header(g_ws, "Num-Shards", "1"); // You may want to change this.

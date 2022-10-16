@@ -83,7 +83,7 @@ void on_message(struct discord *client, const struct discord_message *message) {
     struct discord_embed embed[] = {
       {
         .title = "List of commands",
-        .description = "> `.botinfo` - Shows some of the information about the bot.\n> `.play [music]` - Starts playing a song.\n> `.bassbost (remove?)` - Adds or removes the bassbost effect.\n> `.nightcore (remove?)` - Adds or removes the nightcore effect.",
+        .description = "> `.botinfo` - Shows some of the information about the bot.\n> \n> `.play [music]` - Starts playing a song.\n> `.bassbost (remove?)` - Adds or removes the bassbost effect.\n> `.nightcore (remove?)` - Adds or removes the nightcore effect.",
         .image =
           &(struct discord_embed_image){
             .url = "https://raw.githubusercontent.com/Cogmasters/concord/master/docs/static/social-preview.png",

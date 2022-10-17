@@ -43,6 +43,38 @@ void on_ready(struct discord *client, const struct discord_ready *event) {
 
   const struct discord_user *bot = discord_get_self(client);
   log_trace("[DISCORD_GATEWAY] Logged in as %s#%s!", bot->username, bot->discriminator);
+
+  sqlite3 *db;
+  int rc = sqlite3_open("db.sqlite", &db);
+
+  if (rc != SQLITE_OK) {
+    log_fatal("[SQLITE] Error when opening the db file. [%s]", sqlite3_errmsg(db));
+    if (sqlite3_close(db) != SQLITE_OK) {
+      log_fatal("[SQLITE] Failed to close sqlite db. [%s]", sqlite3_errmsg(db));
+    }
+    return;
+  }
+
+  char *msgErr = NULL;
+
+  char *query = sqlite3_mprintf("DELETE FROM guild_queue;");
+  rc = sqlite3_exec(db, query, NULL, NULL, &msgErr);
+
+  sqlite3_free(query);
+
+  if (rc != SQLITE_OK) {
+    log_fatal("[SYSTEM] Something went wrong while deleting guild_queue table. [%s]", msgErr);
+    if (sqlite3_close(db) != SQLITE_OK) {
+      log_fatal("[SQLITE] Failed to close sqlite db. [%s]", sqlite3_errmsg(db));
+    }
+    return;
+  } else {
+    log_debug("[SYSTEM] Deleted guild_queue records.");
+  }
+
+  if (sqlite3_close(db) != SQLITE_OK) {
+    log_fatal("[SQLITE] Failed to close sqlite db. [%s]", sqlite3_errmsg(db));
+  }
 }
 
 void on_message(struct discord *client, const struct discord_message *message) {
@@ -604,7 +636,7 @@ void on_message(struct discord *client, const struct discord_message *message) {
       }
 
       char lavaURL[1024];
-      snprintf(lavaURL, sizeof(lavaURL), "https://%s/loadtracks?identifier=", lavaHostname);
+      snprintf(lavaURL, sizeof(lavaURL), "http://%s/loadtracks?identifier=", lavaHostname);
 
       if (0 == strncmp(music, "https://", strlen("https://"))) {
         strncat(lavaURL, musicSearchEncoded, sizeof(lavaURL) - 1);
@@ -742,52 +774,6 @@ void on_message(struct discord *client, const struct discord_message *message) {
 
         free(req.body);
 
-        char descriptionEmbed[512];
-
-        float lengthFloat = atof(length);
-        int rounded = (int)(lengthFloat < 0 ? (lengthFloat - 0.5) : (lengthFloat + 0.5));
-
-        if ((rounded / 1000) % 60 > 10) {
-          snprintf(descriptionEmbed, sizeof(descriptionEmbed), "Ok, playing the song NOW!\n:person_tipping_hand: | Author: `%s`\n:musical_note: | Name: `%s`\n:stopwatch:  | Time: `%d:%d`", author, title, ((int)(lengthFloat < 0 ? (lengthFloat - 0.5) : (lengthFloat + 0.5)) / 1000 / 60) << 0, (rounded / 1000) % 60);
-        } else {
-          snprintf(descriptionEmbed, sizeof(descriptionEmbed), "Ok, playing the song NOW!!\n:person_tipping_hand:  | Author: `%s`\n:musical_note: | Name: `%s`\n:stopwatch:  | Time: `%d:0%d`", author, title, ((int)(lengthFloat < 0 ? (lengthFloat - 0.5) : (lengthFloat + 0.5)) / 1000 / 60) << 0, (rounded / 1000) % 60);
-        }
-
-        struct discord_embed embed[] = {
-           {
-            .title = title,
-            .url = url,
-            .description = descriptionEmbed,
-            .image =
-              &(struct discord_embed_image){
-                .url = "https://raw.githubusercontent.com/Cogmasters/concord/master/docs/static/social-preview.png",
-              },
-            .footer =
-              &(struct discord_embed_footer){
-                .text = "Powered by Concord",
-                .icon_url = "https://raw.githubusercontent.com/Cogmasters/concord/master/docs/static/concord-small.png",
-              },
-            .timestamp = discord_timestamp(client),
-            .color = 15615
-          }
-        };
-
-        struct discord_create_message params = {
-          .flags = 0,
-          .embeds =
-            &(struct discord_embeds){
-              .size = 1,
-              .array = embed,
-            },
-        };
-
-        discord_create_message(client, message->channel_id, &params, NULL);
-
-        char pJ[1024];
-        snprintf(pJ, sizeof(pJ), "{\"op\":\"play\",\"guildId\":\"%"PRIu64"\",\"track\":\"%s\",\"noReplace\":false,\"pause\":false}", message->guild_id, track);
-
-        sendPayload(pJ, "play");
-
         char *msgErr = NULL;
 
         char *query = sqlite3_mprintf("CREATE TABLE IF NOT EXISTS guild_channels(guild_id INT, channel_id);");
@@ -816,6 +802,222 @@ void on_message(struct discord *client, const struct discord_message *message) {
           return;
         } else {
           log_debug("[SQLITE] Inserted into guild_channels table the values: guild_id: %"PRIu64", channel_id: %"PRIu64".", message->guild_id, message->channel_id);
+        }
+
+        query = sqlite3_mprintf("CREATE TABLE IF NOT EXISTS guild_queue(guild_id INT, array TEXT);");
+        rc = sqlite3_exec(db, query, NULL, NULL, &msgErr);
+
+        sqlite3_free(query);
+
+        if (rc != SQLITE_OK) {
+          log_fatal("[SYSTEM] Something went wrong while creating the guild_queue table. [%s]", msgErr);
+          if (sqlite3_close(db) != SQLITE_OK) {
+            log_fatal("[SQLITE] Failed to close sqlite db. [%s]", sqlite3_errmsg(db));
+          }
+          return;
+        }
+
+        query = sqlite3_mprintf("SELECT array FROM guild_queue WHERE guild_id = %"PRIu64";", message->guild_id);
+        rc = sqlite3_prepare_v2(db, query, -1, &stmt, NULL);
+
+        char descriptionEmbed[512];
+
+        float lengthFloat = atof(length);
+        int rounded = (int)(lengthFloat < 0 ? (lengthFloat - 0.5) : (lengthFloat + 0.5));
+
+        if ((rc = sqlite3_step(stmt)) == SQLITE_ROW) {
+          sqlite3_free(query);
+
+          if ((rounded / 1000) % 60 > 10) {
+            snprintf(descriptionEmbed, sizeof(descriptionEmbed), "Ok, adding the song to the queue.\n:person_tipping_hand: | Author: `%s`\n:musical_note: | Name: `%s`\n:stopwatch:  | Time: `%d:%d`", author, title, ((int)(lengthFloat < 0 ? (lengthFloat - 0.5) : (lengthFloat + 0.5)) / 1000 / 60) << 0, (rounded / 1000) % 60);
+          } else {
+            snprintf(descriptionEmbed, sizeof(descriptionEmbed), "Ok, adding the song to the queue.\n:person_tipping_hand:  | Author: `%s`\n:musical_note: | Name: `%s`\n:stopwatch:  | Time: `%d:0%d`", author, title, ((int)(lengthFloat < 0 ? (lengthFloat - 0.5) : (lengthFloat + 0.5)) / 1000 / 60) << 0, (rounded / 1000) % 60);
+          }
+
+          struct discord_embed embed[] = {
+             {
+              .title = title,
+              .url = url,
+              .description = descriptionEmbed,
+              .image =
+                &(struct discord_embed_image){
+                  .url = "https://raw.githubusercontent.com/Cogmasters/concord/master/docs/static/social-preview.png",
+                },
+              .footer =
+                &(struct discord_embed_footer){
+                  .text = "Powered by Concord",
+                  .icon_url = "https://raw.githubusercontent.com/Cogmasters/concord/master/docs/static/concord-small.png",
+                },
+              .timestamp = discord_timestamp(client),
+              .color = 15615
+            }
+          };
+
+          struct discord_create_message params = {
+            .flags = 0,
+            .embeds =
+              &(struct discord_embeds){
+                .size = 1,
+                .array = embed,
+              },
+          };
+
+          discord_create_message(client, message->channel_id, &params, NULL);
+
+          printf("DATA: %s\n", sqlite3_column_text(stmt, 0));
+
+          char json[1024];
+          snprintf(json, sizeof(json), "%s",  sqlite3_column_text(stmt, 0));
+
+          jsmn_parser parser;
+          jsmntok_t tokens[1024];
+
+          jsmn_init(&parser);
+          int r = jsmn_parse(&parser, json, sizeof(json), tokens, sizeof(tokens));
+
+          if (r < 0) {
+            log_error("[JSMNF] Failed to parse JSON.");
+            return;
+          }
+
+          jsmnf_loader loader;
+          jsmnf_pair pairs[1024];
+
+          jsmnf_init(&loader);
+          r = jsmnf_load(&loader, json, tokens, parser.toknext, pairs, 1024);
+
+          if (r < 0) {
+            log_error("[JSMNF] Failed to load JSMNF.");
+            return;
+          }
+
+          if (sqlite3_finalize(stmt) != SQLITE_OK) {
+            log_fatal("[SQLITE] Error while executing function sqlite3_finalize.");
+            return;
+          }
+
+          jsonb b;
+          char qbuf[1024];
+
+          jsonb_init(&b);
+          jsonb_array(&b, qbuf, sizeof(qbuf));
+
+          jsmnf_pair *f;
+
+          for (int i = 0; i < pairs->size; ++i) {
+            f = &pairs->fields[i];
+            char arrayTrack[256];
+            snprintf(arrayTrack, sizeof(arrayTrack), "%.*s", (int)f->v.len, json + f->v.pos);
+            jsonb_string(&b, qbuf, sizeof(qbuf), arrayTrack, strlen(arrayTrack));
+          }
+          jsonb_string(&b, qbuf, sizeof(qbuf), track, strlen(track));
+
+          jsonb_array_pop(&b, qbuf, sizeof(qbuf));
+
+          printf("%s\n", qbuf);
+
+          query = sqlite3_mprintf("DELETE FROM guild_queue WHERE guild_id = %"PRIu64";", message->guild_id);
+          rc = sqlite3_exec(db, query, NULL, NULL, &msgErr);
+
+          sqlite3_free(query);
+
+          if (rc != SQLITE_OK) {
+            log_fatal("[SYSTEM] Something went wrong while deleting guild_queue table from guild_id. [%s]", msgErr);
+            if (sqlite3_close(db) != SQLITE_OK) {
+              log_fatal("[SQLITE] Failed to close sqlite db. [%s]", sqlite3_errmsg(db));
+            }
+            return;
+          } else {
+            log_debug("[SYSTEM] Deleted guild_queue where guild_id = %"PRIu64".", message->guild_id);
+          }
+
+          query = sqlite3_mprintf("INSERT INTO guild_queue(guild_id, array) values(%"PRIu64", '%s');", message->guild_id, qbuf);
+          rc = sqlite3_exec(db, query, NULL, NULL, &msgErr);
+
+          sqlite3_free(query);
+
+          if (rc != SQLITE_OK) {
+            log_fatal("[SQLITE] Something went wrong while inserting values into guild_queue table. [%s]", msgErr);
+            if (sqlite3_close(db) != SQLITE_OK) {
+              log_fatal("[SQLITE] Failed to close sqlite db. [%s]", sqlite3_errmsg(db));
+            }
+            return;
+          } else {
+            log_debug("[SQLITE] Inserted into guild_queue table the values: guild_id: %"PRIu64", array: %s.", message->guild_id, qbuf);
+          }
+        } else {
+          if (sqlite3_finalize(stmt) != SQLITE_OK) {
+            log_fatal("[SQLITE] Error while executing function sqlite3_finalize.");
+            return;
+          }
+
+          if ((rounded / 1000) % 60 > 10) {
+            snprintf(descriptionEmbed, sizeof(descriptionEmbed), "Ok, playing the song NOW!\n:person_tipping_hand: | Author: `%s`\n:musical_note: | Name: `%s`\n:stopwatch:  | Time: `%d:%d`", author, title, ((int)(lengthFloat < 0 ? (lengthFloat - 0.5) : (lengthFloat + 0.5)) / 1000 / 60) << 0, (rounded / 1000) % 60);
+          } else {
+            snprintf(descriptionEmbed, sizeof(descriptionEmbed), "Ok, playing the song NOW!!\n:person_tipping_hand:  | Author: `%s`\n:musical_note: | Name: `%s`\n:stopwatch:  | Time: `%d:0%d`", author, title, ((int)(lengthFloat < 0 ? (lengthFloat - 0.5) : (lengthFloat + 0.5)) / 1000 / 60) << 0, (rounded / 1000) % 60);
+          }
+
+          struct discord_embed embed[] = {
+             {
+              .title = title,
+              .url = url,
+              .description = descriptionEmbed,
+              .image =
+                &(struct discord_embed_image){
+                  .url = "https://raw.githubusercontent.com/Cogmasters/concord/master/docs/static/social-preview.png",
+                },
+              .footer =
+                &(struct discord_embed_footer){
+                  .text = "Powered by Concord",
+                  .icon_url = "https://raw.githubusercontent.com/Cogmasters/concord/master/docs/static/concord-small.png",
+                },
+              .timestamp = discord_timestamp(client),
+              .color = 15615
+            }
+          };
+
+          struct discord_create_message params = {
+            .flags = 0,
+            .embeds =
+              &(struct discord_embeds){
+                .size = 1,
+                .array = embed,
+              },
+          };
+
+          discord_create_message(client, message->channel_id, &params, NULL);
+
+          char pJ[1024];
+          snprintf(pJ, sizeof(pJ), "{\"op\":\"play\",\"guildId\":\"%"PRIu64"\",\"track\":\"%s\",\"noReplace\":false,\"pause\":false}", message->guild_id, track);
+
+          sendPayload(pJ, "play");
+
+          jsonb b;
+          char qbuf[1024];
+
+          jsonb_init(&b);
+          jsonb_array(&b, qbuf, sizeof(qbuf));
+          {
+            jsonb_string(&b, qbuf, sizeof(qbuf), track, strlen(track));
+            jsonb_array_pop(&b, qbuf, sizeof(qbuf));
+          }
+
+          printf("ABC %s\n", qbuf);
+
+          query = sqlite3_mprintf("INSERT INTO guild_queue(guild_id, array) values(%"PRIu64", '%s');", message->guild_id, qbuf);
+          rc = sqlite3_exec(db, query, NULL, NULL, &msgErr);
+
+          sqlite3_free(query);
+
+          if (rc != SQLITE_OK) {
+            log_fatal("[SQLITE] Something went wrong while inserting values into guild_queue table. [%s]", msgErr);
+            if (sqlite3_close(db) != SQLITE_OK) {
+              log_fatal("[SQLITE] Failed to close sqlite db. [%s]", sqlite3_errmsg(db));
+            }
+            return;
+          } else {
+            log_debug("[SQLITE] Inserted into guild_queue table the values: guild_id: %"PRIu64", array: %s.", message->guild_id, qbuf);
+          }
         }
 
         if (sqlite3_close(db) != SQLITE_OK) {
@@ -865,7 +1067,7 @@ void on_message(struct discord *client, const struct discord_message *message) {
   }
 }
 
-int main () {
+int main (void) {
   struct discord *client = discord_config_init("config.json");
 
   // WEBSOCKET
@@ -884,7 +1086,7 @@ int main () {
   snprintf(lavaHostname, sizeof(lavaHostname), "%.*s", (int)value.size, value.start);
 
   char lavaWs[256];
-  snprintf(lavaWs, sizeof(lavaWs), "wss://%s", lavaHostname);
+  snprintf(lavaWs, sizeof(lavaWs), "ws://%s", lavaHostname);
 
   ws_set_url(g_ws, lavaWs, NULL);
 

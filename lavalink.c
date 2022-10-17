@@ -32,7 +32,8 @@ void on_cycle(struct discord *client) {
 }
 
 void on_text(void *data, struct websockets *ws, struct ws_info *info, const char *text, size_t len) {
-  (void) ws; (void) info;
+  (void)ws; (void)info;
+  printf("%s\n", text);
 
   jsmn_parser parser;
   jsmntok_t tokens[1024];
@@ -106,39 +107,224 @@ void on_text(void *data, struct websockets *ws, struct ws_info *info, const char
         }
         return;
       } else {
-        struct discord_embed embed[] = {
-          {
-            .description = "The music has ended.",
-            .image =
-              &(struct discord_embed_image){
-                .url = "https://raw.githubusercontent.com/Cogmasters/concord/master/docs/static/social-preview.png",
-              },
-            .footer =
-              &(struct discord_embed_footer){
-                .text = "Powered by Concord",
-                .icon_url = "https://raw.githubusercontent.com/Cogmasters/concord/master/docs/static/concord-small.png",
-              },
-            .timestamp = discord_timestamp(data),
-            .color = 15615
+        long long channelID = sqlite3_column_int64(stmt, 0);
+
+        if (sqlite3_finalize(stmt) != SQLITE_OK) {
+          log_fatal("[SQLITE] Error while executing function sqlite3_finalize.");
+          return;
+        }
+
+        query = sqlite3_mprintf("SELECT array FROM guild_queue WHERE guild_id = %.*s;", (int)guildId->v.len, text + guildId->v.pos);
+        rc = sqlite3_prepare_v2(db, query, -1, &stmt, NULL);
+
+        sqlite3_free(query);
+
+        (rc = sqlite3_step(stmt));
+
+        log_warn("%s\n", sqlite3_column_text(stmt, 0));
+
+        if (rc == SQLITE_ROW) {
+          char json[1024];
+          snprintf(json, sizeof(json), "%s", sqlite3_column_text(stmt, 0));
+
+          jsmn_parser parser;
+          jsmntok_t tokens[1024];
+
+          jsmn_init(&parser);
+          int r = jsmn_parse(&parser, json, sizeof(json), tokens, sizeof(tokens));
+
+          if (r < 0) {
+            log_error("[JSMNF] Failed to parse JSON.");
+            return;
           }
-        };
 
-        struct discord_create_message params = {
-          .flags = 0,
-          .embeds =
-            &(struct discord_embeds){
-              .size = 1,
-              .array = embed,
-            },
-        };
+          jsmnf_loader loader;
+          jsmnf_pair pairs[1024];
 
-        discord_create_message(data, sqlite3_column_int64(stmt, 0), &params, NULL);
+          jsmnf_init(&loader);
+          r = jsmnf_load(&loader, json, tokens, parser.toknext, pairs, 1024);
+
+          if (r < 0) {
+            log_error("[JSMNF] Failed to load JSMNF.");
+            return;
+          }
+
+          if (sqlite3_finalize(stmt) != SQLITE_OK) {
+            log_fatal("[SQLITE] Error while executing function sqlite3_finalize.");
+            return;
+          }
+
+          jsmnf_pair *nTrack = &pairs->fields[1];
+
+          char pJ[1024];
+          snprintf(pJ, sizeof(pJ), "{\"op\":\"play\",\"guildId\":\"%.*s\",\"track\":\"%.*s\",\"noReplace\":false,\"pause\":false}", (int)guildId->v.len, text + guildId->v.pos, (int)nTrack->v.len, json + nTrack->v.pos);
+
+          sendPayload(pJ, "play");
+
+          jsonb b;
+          char qbuf[1024];
+
+          jsonb_init(&b);
+          jsonb_array(&b, qbuf, sizeof(qbuf));
+
+          if (pairs->size == 1) {
+            char *msgErr = NULL;
+
+            query = sqlite3_mprintf("DELETE FROM guild_queue WHERE guild_id = %.*s;", (int)guildId->v.len, text + guildId->v.pos);
+            rc = sqlite3_exec(db, query, NULL, NULL, &msgErr);
+
+            sqlite3_free(query);
+
+            if (rc != SQLITE_OK) {
+              log_fatal("[SYSTEM] Something went wrong while deleting guild_queue table from guild_id. [%s]", msgErr);
+              if (sqlite3_close(db) != SQLITE_OK) {
+                log_fatal("[SQLITE] Failed to close sqlite db. [%s]", sqlite3_errmsg(db));
+              }
+              return;
+            } else {
+              log_debug("[SYSTEM] Deleted guild_queue where guild_id = %.*s.", (int)guildId->v.len, text + guildId->v.pos);
+            }
+
+            if (sqlite3_close(db) != SQLITE_OK) {
+              log_fatal("[SQLITE] Failed to close sqlite db. [%s]", sqlite3_errmsg(db));
+            }
+
+            struct discord_embed embed[] = {
+              {
+                .description = "The music has ended.",
+                .image =
+                  &(struct discord_embed_image){
+                    .url = "https://raw.githubusercontent.com/Cogmasters/concord/master/docs/static/social-preview.png",
+                  },
+                .footer =
+                  &(struct discord_embed_footer){
+                    .text = "Powered by Concord",
+                    .icon_url = "https://raw.githubusercontent.com/Cogmasters/concord/master/docs/static/concord-small.png",
+                  },
+                .timestamp = discord_timestamp(data),
+                .color = 15615
+              }
+            };
+
+            struct discord_create_message params = {
+              .flags = 0,
+              .embeds =
+                &(struct discord_embeds){
+                  .size = 1,
+                  .array = embed,
+                },
+            };
+
+            discord_create_message(data, channelID, &params, NULL);
+            return;
+          }
+
+          jsmnf_pair *f;
+
+          for (int i = 1; i < pairs->size; ++i) {
+            f = &pairs->fields[i];
+            char arrayTrack[256];
+            snprintf(arrayTrack, sizeof(arrayTrack), "%.*s", (int)f->v.len, json + f->v.pos);
+            jsonb_string(&b, qbuf, sizeof(qbuf), arrayTrack, strlen(arrayTrack));
+          }
+
+          jsonb_array_pop(&b, qbuf, sizeof(qbuf));
+
+          char *msgErr = NULL;
+
+          char *query = sqlite3_mprintf("DELETE FROM guild_queue WHERE guild_id = %.*s;", (int)guildId->v.len, text + guildId->v.pos);
+          rc = sqlite3_exec(db, query, NULL, NULL, &msgErr);
+
+          sqlite3_free(query);
+
+          if (rc != SQLITE_OK) {
+            log_fatal("[SYSTEM] Something went wrong while deleting guild_queue table from guild_id. [%s]", msgErr);
+            if (sqlite3_close(db) != SQLITE_OK) {
+              log_fatal("[SQLITE] Failed to close sqlite db. [%s]", sqlite3_errmsg(db));
+            }
+            return;
+          } else {
+            log_debug("[SYSTEM] Deleted guild_queue where guild_id = %.*s.", (int)guildId->v.len, text + guildId->v.pos);
+          }
+
+          query = sqlite3_mprintf("INSERT INTO guild_queue(guild_id, array) values(%.*s, '%s');", (int)guildId->v.len, text + guildId->v.pos, qbuf);
+          rc = sqlite3_exec(db, query, NULL, NULL, &msgErr);
+
+          sqlite3_free(query);
+
+          if (rc != SQLITE_OK) {
+            log_fatal("[SQLITE] Something went wrong while inserting values into guild_queue table. [%s]", msgErr);
+            if (sqlite3_close(db) != SQLITE_OK) {
+              log_fatal("[SQLITE] Failed to close sqlite db. [%s]", sqlite3_errmsg(db));
+            }
+            return;
+          } else {
+            log_debug("[SQLITE] Inserted into guild_queue table the values: guild_id: %.*s, array: %s.", (int)guildId->v.len, text + guildId->v.pos, qbuf);
+          }
+
+          struct discord_embed embed[] = {
+            {
+              .description = "Now, going to play next music from queue.",
+              .image =
+                &(struct discord_embed_image){
+                  .url = "https://raw.githubusercontent.com/Cogmasters/concord/master/docs/static/social-preview.png",
+                },
+              .footer =
+                &(struct discord_embed_footer){
+                  .text = "Powered by Concord",
+                  .icon_url = "https://raw.githubusercontent.com/Cogmasters/concord/master/docs/static/concord-small.png",
+                },
+              .timestamp = discord_timestamp(data),
+              .color = 15615
+            }
+          };
+
+          struct discord_create_message params = {
+            .flags = 0,
+            .embeds =
+              &(struct discord_embeds){
+                .size = 1,
+                .array = embed,
+              },
+          };
+
+          discord_create_message(data, channelID, &params, NULL);
+        } else {
+          if (sqlite3_finalize(stmt) != SQLITE_OK) {
+            log_fatal("[SQLITE] Error while executing function sqlite3_finalize.");
+            return;
+          }
+
+          struct discord_embed embed[] = {
+            {
+              .description = "<a:Noo:757568484086382622> | Some wild error happened, this should be reported.",
+              .image =
+                &(struct discord_embed_image){
+                 .url = "https://raw.githubusercontent.com/Cogmasters/concord/master/docs/static/social-preview.png",
+                },
+              .footer =
+                &(struct discord_embed_footer){
+                  .text = "Powered by Concord",
+                  .icon_url = "https://raw.githubusercontent.com/Cogmasters/concord/master/docs/static/concord-small.png",
+                },
+              .timestamp = discord_timestamp(data),
+              .color = 16711680
+            }
+          };
+
+          struct discord_create_message params = {
+            .flags = 0,
+            .embeds =
+              &(struct discord_embeds){
+                .size = 1,
+                .array = embed,
+              },
+          };
+
+          discord_create_message(data, channelID, &params, NULL);
+        }
       }
-      
-      if (sqlite3_finalize(stmt) != SQLITE_OK) {
-        log_fatal("[SQLITE] Error while executing function sqlite3_finalize.");
-        return;
-      }
+
       if (sqlite3_close(db) != SQLITE_OK) {
         log_fatal("[SQLITE] Failed to close sqlite db. [%s]", sqlite3_errmsg(db));
       }

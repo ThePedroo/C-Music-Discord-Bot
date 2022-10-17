@@ -11,7 +11,7 @@ There are currently two ways of using it. Compiling the source code and using it
 * 1 - Use `git clone https://github.com/ThePedroo/C-Music-Discord-Bot.git` to get the bot files.
 * 2 - Install clang / GCC.
 * 3 - Install and build [Concord](https://github.com/Cogmasters/concord).
-* Info. Dont't have a [Lavalink](https://github.com/freyacodes/Lavalink) node? Setup it on [replit.com](https://replit.com/).
+* Info. Don't have a [Lavalink](https://github.com/freyacodes/Lavalink) node? Setup it on [replit.com](https://replit.com/).
 * 4 - Install sqlite3: `sudo apt install sqlite3`
 
 If you did everything correct, use: 
@@ -23,7 +23,7 @@ Done, now you will have a compiled version of the music bot for your architectur
 
 ## Pre-compiled 
 
-* 1 - Go to Github releases and download the `Concord-x86_64` file, after it run it.
+* 1 - Go to Github releases and download the pre-compiled file that matches your CPU architecute, after it runs it.
 
 Done! Yeah, it's that simple to use it. ^^
 

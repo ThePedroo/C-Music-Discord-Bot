@@ -14,7 +14,6 @@
 
 #include "lavalink.c"
 
-const char *keywords = "host=/var/run/postgresql port=5432 dbname=postgresdb user=postgresdb sslmode=disable password=Pedro2532009!";
 char lavaHostname[128]; char lavaPasswd[128]; char botID[32];
 
 struct memory {
@@ -40,18 +39,15 @@ static size_t WriteMemoryCallback(void *contents, size_t size, size_t nmemb, voi
   return realsize;
 }
 
-void on_ready(struct discord *client, const struct discord_ready *event) {
-  (void) event;
+void on_ready(struct discord *client, const struct discord_ready *bot) {
+  log_trace("[DISCORD_GATEWAY] Logged in as %s#%s!", bot->user->username, bot->user->discriminator);
 
-  const struct discord_user *bot = discord_get_self(client);
-  log_trace("[DISCORD_GATEWAY] Logged in as %s#%s!", bot->username, bot->discriminator);
-
-  PGconn *conn = connectDB();
+  PGconn *conn = connectDB(client);
   if (!conn) return;
 
-  PGresult *res = _PQexec(conn, "DROP TABLE IF EXISTS guild_queue CASCADE;");
+  PGresult *res = PQexec(conn, "DROP TABLE IF EXISTS guild_queue CASCADE;");
 
-  int resultCode = _PQresultStatus(conn, res, "deleting guild_queue table", "Succesfully deleted all guild_queue records.");
+  int resultCode = _PQresultStatus(conn, res, "deleting guild_queue table", "Successfully deleted all guild_queue records.");
   if (!resultCode) return;
 
   PQclear(res);
@@ -536,21 +532,40 @@ void on_message(struct discord *client, const struct discord_message *message) {
       discord_create_message(client, message->channel_id, &params, NULL);
     }
 
-    PGconn *conn = connectDB();
+    PGconn *conn = connectDB(client);
     if (!conn) return;
 
-    char command[128];
-    snprintf(command, sizeof(command), "SELECT voice_channel_id FROM user_voice WHERE user_id = %"PRIu64";", message->author->id);
+    PGresult *res = PQexec(conn, "CREATE TABLE IF NOT EXISTS user_voice(user_id BIGINT UNIQUE NOT NULL, voice_channel_id BIGINT NOT NULL);");
 
-    PGresult *res = _PQexec(conn, command);
-
-    _PQresultStatus(conn, res, "trying to retrieve the voice_channel_id", NULL);
-
-    char *vcId = PQgetvalue(res, 0, 0);
+    int resultCode = _PQresultStatus(conn, res, "creating user_voice table", NULL);
+    if (!resultCode) return;
 
     PQclear(res);
 
-    if (vcId) {
+    char command[2048];
+    snprintf(command, sizeof(command), "SELECT EXISTS(SELECT voice_channel_id FROM user_voice WHERE user_id = %"PRIu64");", message->author->id);
+
+    res = PQexec(conn, command);
+
+    resultCode = _PQresultStatus(conn, res, "trying to retrieve the voice_channel_id", NULL);
+    if (!resultCode) return;
+
+    char *existsvcId = PQgetvalue(res, 0, 0);
+
+    PQclear(res);
+
+    if (0 == strcmp(existsvcId, "t")) {
+      snprintf(command, sizeof(command), "SELECT voice_channel_id FROM user_voice WHERE user_id = %"PRIu64";", message->author->id);
+
+      res = PQexec(conn, command);
+
+      resultCode = _PQresultStatus(conn, res, "trying to retrieve the voice_channel_id", NULL);
+      if (!resultCode) return;
+
+      char *vcId = PQgetvalue(res, 0, 0);
+
+      PQclear(res);
+
       char joinVCPayload[128];
       snprintf(joinVCPayload, sizeof(joinVCPayload), "{\"op\":4,\"d\":{\"guild_id\":%"PRIu64",\"channel_id\":\"%s\",\"self_mute\":false,\"self_deaf\":true}}", message->guild_id, vcId);
 
@@ -603,7 +618,7 @@ void on_message(struct discord *client, const struct discord_message *message) {
       }
 
       char lavaURL[1024];
-      snprintf(lavaURL, sizeof(lavaURL), "http://%s/loadtracks?identifier=", lavaHostname);
+      snprintf(lavaURL, sizeof(lavaURL), "https://%s/loadtracks?identifier=", lavaHostname);
 
       if (0 == strncmp(music, "https://", strlen("https://"))) {
         strncat(lavaURL, musicSearchEncoded, sizeof(lavaURL) - 1);
@@ -678,7 +693,7 @@ void on_message(struct discord *client, const struct discord_message *message) {
         int r = jsmn_parse(&parser, req.body, req.size, tokens, sizeof(tokens));
 
         if (r < 0) {
-          log_error("[JSMNF] Failed to parse JSON.");
+          log_error("[jsmn-find] Failed to parse JSON.");
           return;
         }
 
@@ -689,7 +704,7 @@ void on_message(struct discord *client, const struct discord_message *message) {
         r = jsmnf_load(&loader, req.body, tokens, parser.toknext, pairs, 1024);
 
         if (r < 0) {
-          log_error("[JSMNF] Failed to load JSMNF.");
+          log_error("[jsmn-find] Failed to load jsmn-find.");
           return;
         }
 
@@ -731,7 +746,7 @@ void on_message(struct discord *client, const struct discord_message *message) {
         r = jsmnf_unescape(title, sizeof(title), title, ti->v.len);
 
         if (r < 0) {
-          log_error("[JSMNF] Failed to parse JSON.");
+          log_error("[jsmn-find] Failed to parse JSON.");
           return;
         }
 
@@ -741,35 +756,19 @@ void on_message(struct discord *client, const struct discord_message *message) {
 
         free(req.body);
 
-        PGresult *res = _PQexec(conn, "CREATE TABLE IF NOT EXISTS guild_channels(guild_id BIGINT, channel_id BIGINT);");
+        PGresult *res = PQexec(conn, "CREATE TABLE IF NOT EXISTS guild_queue(guild_id BIGINT UNIQUE NOT NULL, \"array\" TEXT NOT NULL);");
 
-        int resultCode = _PQresultStatus(conn, res, "creating guild_channels table", NULL);
-        if (!resultCode) return;
-
-        PQclear(res);
-
-        char command[2048];
-        snprintf(command, sizeof(command), "INSERT INTO guild_channels(guild_id, channel_id) values(%"PRIu64", %"PRIu64");", message->guild_id, message->channel_id);
-
-        res = _PQexec(conn, command);
-
-        resultCode = _PQresultStatus(conn, res, "inserting records into guild_voice table", "Successfully inserted records into the guild_channels table.");
-        if (!resultCode) return;
-
-        PQclear(res);
-
-        res = _PQexec(conn, "CREATE TABLE IF NOT EXISTS guild_queue(guild_id BIGINT, \"array\" TEXT);");
-
-        resultCode = _PQresultStatus(conn, res, "creating guild_queue table", NULL);
+        int resultCode = _PQresultStatus(conn, res, "creating guild_queue table", NULL);
         if (!resultCode) return;
 
         PQclear(res);
 
         snprintf(command, sizeof(command), "SELECT EXISTS(SELECT \"array\" FROM guild_queue WHERE guild_id = %"PRIu64");", message->guild_id);
-printf("%s\n", command);
-        res = _PQexec(conn, command);
 
-        _PQresultStatus(conn, res, "trying to retrieve the array", NULL);
+        res = PQexec(conn, command);
+
+        resultCode = _PQresultStatus(conn, res, "trying to retrieve the array", NULL);
+        if (!resultCode) return;
 
         char *exists = PQgetvalue(res, 0, 0);
 
@@ -783,11 +782,70 @@ printf("%s\n", command);
         if (0 == strcmp(exists, "t")) {
           snprintf(command, sizeof(command), "SELECT \"array\" FROM guild_queue WHERE guild_id = %"PRIu64";", message->guild_id);
 
-          res = _PQexec(conn, command);
+          res = PQexec(conn, command);
 
-          _PQresultStatus(conn, res, "trying to retrieve the array", NULL);
+          resultCode = _PQresultStatus(conn, res, "trying to retrieve the array", NULL);
+          if (!resultCode) return;
 
-          char *array = PQgetvalue(res, 0, 0);
+          char *arrQueue = PQgetvalue(res, 0, 0);
+
+          PQclear(res);
+
+          jsmn_parser parser;
+          jsmntok_t tokens[1024];
+
+          jsmn_init(&parser);
+          int r = jsmn_parse(&parser, arrQueue, strlen(arrQueue), tokens, sizeof(tokens));
+
+          if (r < 0) {
+            log_error("[jsmn-find] Failed to parse JSON.");
+            return;
+          }
+
+          jsmnf_loader loader;
+          jsmnf_pair pairs[1024];
+
+          jsmnf_init(&loader);
+          r = jsmnf_load(&loader, arrQueue, tokens, parser.toknext, pairs, 1024);
+
+          if (r < 0) {
+            log_error("[jsmn-find] Failed to load jsmn-find.");
+            return;
+          }
+
+          jsonb b;
+          char qbuf[1024];
+
+          jsonb_init(&b);
+          jsonb_array(&b, qbuf, sizeof(qbuf));
+
+          jsmnf_pair *f;
+
+          for (int i = 0; i < pairs->size; ++i) {
+            f = &pairs->fields[i];
+            char arrayTrack[256];
+            snprintf(arrayTrack, sizeof(arrayTrack), "%.*s", (int)f->v.len, arrQueue + f->v.pos);
+            jsonb_string(&b, qbuf, sizeof(qbuf), arrayTrack, strlen(arrayTrack));
+          }
+          jsonb_string(&b, qbuf, sizeof(qbuf), track, strlen(track));
+
+          jsonb_array_pop(&b, qbuf, sizeof(qbuf));
+
+          snprintf(command, sizeof(command), "DELETE FROM guild_queue WHERE guild_id = %"PRIu64";", message->guild_id);
+
+          res = PQexec(conn, command);
+
+          int resultCode = _PQresultStatus(conn, res, "deleting guild_queue table where guild_id matches the guild's Id", "Successfully deleted guild_queue table from guild_id = Message Guild ID.");
+          if (!resultCode) return;
+
+          PQclear(res);
+
+          snprintf(command, sizeof(command), "INSERT INTO guild_queue(guild_id, \"array\") values(%"PRIu64", '%s');", message->guild_id, qbuf);
+
+          res = PQexec(conn, command);
+
+          resultCode = _PQresultStatus(conn, res, "inserting records into guild_queue table", "Successfully inserted records into the guild_queue table.");
+          if (!resultCode) return;
 
           PQclear(res);
 
@@ -826,65 +884,40 @@ printf("%s\n", command);
           };
 
           discord_create_message(client, message->channel_id, &params, NULL);
+        } else {
+          char pJ[1024];
+          snprintf(pJ, sizeof(pJ), "{\"op\":\"play\",\"guildId\":\"%"PRIu64"\",\"track\":\"%s\",\"noReplace\":false,\"pause\":false}", message->guild_id, track);
 
-          jsmn_parser parser;
-          jsmntok_t tokens[1024];
-
-          jsmn_init(&parser);
-          int r = jsmn_parse(&parser, array, strlen(array), tokens, sizeof(tokens));
-
-          if (r < 0) {
-            log_error("[JSMNF] Failed to parse JSON.");
-            return;
-          }
-
-          jsmnf_loader loader;
-          jsmnf_pair pairs[1024];
-
-          jsmnf_init(&loader);
-          r = jsmnf_load(&loader, array, tokens, parser.toknext, pairs, 1024);
-
-          if (r < 0) {
-            log_error("[JSMNF] Failed to load JSMNF.");
-            return;
-          }
+          sendPayload(pJ, "play");
 
           jsonb b;
           char qbuf[1024];
 
           jsonb_init(&b);
           jsonb_array(&b, qbuf, sizeof(qbuf));
-
-          jsmnf_pair *f;
-
-          for (int i = 0; i < pairs->size; ++i) {
-            f = &pairs->fields[i];
-            char arrayTrack[256];
-            int len = snprintf(arrayTrack, sizeof(arrayTrack), "%.*s", (int)f->v.len, array + f->v.pos);
-            jsonb_string(&b, qbuf, sizeof(qbuf), arrayTrack, len);
+          {
+            jsonb_string(&b, qbuf, sizeof(qbuf), track, strlen(track));
+            jsonb_array_pop(&b, qbuf, sizeof(qbuf));
           }
-          jsonb_string(&b, qbuf, sizeof(qbuf), track, strlen(track));
-
-          jsonb_array_pop(&b, qbuf, sizeof(qbuf));
 
           snprintf(command, sizeof(command), "DELETE FROM guild_queue WHERE guild_id = %"PRIu64";", message->guild_id);
 
-          res = _PQexec(conn, command);
+          res = PQexec(conn, command);
 
-          int resultCode = _PQresultStatus(conn, res, "deleting guild_queue table from guild_id", "Successfully deleted guild_queue table from guild_id = Message Guild ID.");
+          int resultCode = _PQresultStatus(conn, res, "deleting guild_queue table where guild_id matches the guild's Id", "Successfully deleted guild_queue table from guild_id = Message Guild ID.");
           if (!resultCode) return;
 
           PQclear(res);
 
           snprintf(command, sizeof(command), "INSERT INTO guild_queue(guild_id, \"array\") values(%"PRIu64", '%s');", message->guild_id, qbuf);
 
-          res = _PQexec(conn, command);
+          res = PQexec(conn, command);
 
           resultCode = _PQresultStatus(conn, res, "inserting records into guild_queue table", "Successfully inserted records into the guild_queue table.");
           if (!resultCode) return;
 
           PQclear(res);
-        } else {
+
           if ((rounded / 1000) % 60 > 10) {
             snprintf(descriptionEmbed, sizeof(descriptionEmbed), "Ok, playing the song NOW!\n:person_tipping_hand: | Author: `%s`\n:musical_note: | Name: `%s`\n:stopwatch:  | Time: `%d:%d`", author, title, ((int)(lengthFloat < 0 ? (lengthFloat - 0.5) : (lengthFloat + 0.5)) / 1000 / 60) << 0, (rounded / 1000) % 60);
           } else {
@@ -920,33 +953,32 @@ printf("%s\n", command);
           };
 
           discord_create_message(client, message->channel_id, &params, NULL);
-
-          char pJ[1024];
-          snprintf(pJ, sizeof(pJ), "{\"op\":\"play\",\"guildId\":\"%"PRIu64"\",\"track\":\"%s\",\"noReplace\":false,\"pause\":false}", message->guild_id, track);
-
-          sendPayload(pJ, "play");
-
-          jsonb b;
-          char qbuf[1024];
-
-          jsonb_init(&b);
-          jsonb_array(&b, qbuf, sizeof(qbuf));
-          {
-            jsonb_string(&b, qbuf, sizeof(qbuf), track, strlen(track));
-            jsonb_array_pop(&b, qbuf, sizeof(qbuf));
         }
 
-          printf("ABC %s\n", qbuf);
+        res = PQexec(conn, "CREATE TABLE IF NOT EXISTS guild_channels(guild_id BIGINT UNIQUE NOT NULL, channel_id BIGINT UNIQUE NOT NULL);");
 
-          snprintf(command, sizeof(command), "INSERT INTO guild_queue(guild_id, \"array\") values(%"PRIu64", '%s');", message->guild_id, qbuf);
+        resultCode = _PQresultStatus(conn, res, "creating guild_channels table", NULL);
+        if (!resultCode) return;
 
-          res = _PQexec(conn, command);
+        PQclear(res);
 
-          resultCode = _PQresultStatus(conn, res, "inserting records into guild_queue table", "Successfully inserted records into the guild_queue table.");
-          if (!resultCode) return;
+        snprintf(command, sizeof(command), "DELETE FROM guild_channels WHERE guild_id = %"PRIu64";", message->guild_id);
 
-          PQclear(res);
-        }
+        res = PQexec(conn, command);
+
+        resultCode = _PQresultStatus(conn, res, "deleting guild_channels where guild_id matches the guild's Id", "Successfully deleted guild_channels table where guild_id = Message Guild ID.");
+        if (!resultCode) return;
+
+        PQclear(res);
+
+        snprintf(command, sizeof(command), "INSERT INTO guild_channels(guild_id, channel_id) values(%"PRIu64", %"PRIu64");", message->guild_id, message->channel_id);
+
+        res = PQexec(conn, command);
+
+        resultCode = _PQresultStatus(conn, res, "inserting records into guild_voice table", "Successfully inserted records into the guild_channels table.");
+        if (!resultCode) return;
+
+        PQclear(res);
 
         PQfinish(conn);
       }
@@ -1003,7 +1035,7 @@ int main (void) {
   snprintf(lavaHostname, sizeof(lavaHostname), "%.*s", (int)value.size, value.start);
 
   char lavaWs[256];
-  snprintf(lavaWs, sizeof(lavaWs), "ws://%s", lavaHostname);
+  snprintf(lavaWs, sizeof(lavaWs), "wss://%s", lavaHostname);
 
   ws_set_url(g_ws, lavaWs, NULL);
 

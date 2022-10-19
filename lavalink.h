@@ -22,7 +22,7 @@ enum discord_event_scheduler scheduler(struct discord *client, const char data[]
 
 void sendPayload(char payload[], char *payloadOP);
 
-PGconn *connectDB();
+PGconn *connectDB(void);
 
 PGresult *_PQexec(PGconn *conn, char *command);
 

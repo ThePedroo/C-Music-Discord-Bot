@@ -6,6 +6,8 @@
 #include <concord/discord.h>
 #include <concord/discord-internal.h> // All ws functions related
 
+#include <libpq-fe.h>
+
 static struct websockets *g_ws;
 
 void on_connect(void *data, struct websockets *ws, struct ws_info *info, const char *protocols);
@@ -19,5 +21,11 @@ void on_text(void *data, struct websockets *ws, struct ws_info *info, const char
 enum discord_event_scheduler scheduler(struct discord *client, const char data[], size_t size, enum discord_gateway_events event);
 
 void sendPayload(char payload[], char *payloadOP);
+
+PGconn *connectDB();
+
+PGresult *_PQexec(PGconn *conn, char *command);
+
+int _PQresultStatus(PGconn *conn, PGresult *res, char *action, char *msgDone);
 
 #endif

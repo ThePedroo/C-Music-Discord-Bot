@@ -552,10 +552,10 @@ void on_message(struct discord *client, const struct discord_message *message) {
 
     char *existsvcId = PQgetvalue(res, 0, 0);
 
-    PQclear(res);
-
     if (0 == strcmp(existsvcId, "t")) {
       snprintf(command, sizeof(command), "SELECT voice_channel_id FROM user_voice WHERE user_id = %"PRIu64";", message->author->id);
+
+      PQclear(res);
 
       res = PQexec(conn, command);
 
@@ -564,10 +564,10 @@ void on_message(struct discord *client, const struct discord_message *message) {
 
       char *vcId = PQgetvalue(res, 0, 0);
 
-      PQclear(res);
-
       char joinVCPayload[128];
       snprintf(joinVCPayload, sizeof(joinVCPayload), "{\"op\":4,\"d\":{\"guild_id\":%"PRIu64",\"channel_id\":\"%s\",\"self_mute\":false,\"self_deaf\":true}}", message->guild_id, vcId);
+
+      PQclear(res);
 
       if (ws_send_text(client->gw.ws, NULL, joinVCPayload, strlen(joinVCPayload)) == false) {
       log_fatal("[LIBCURL] Something went wrong while sending a payload with op 4 to Discord.");
@@ -772,14 +772,14 @@ void on_message(struct discord *client, const struct discord_message *message) {
 
         char *exists = PQgetvalue(res, 0, 0);
 
-        PQclear(res);
-
         char descriptionEmbed[512];
 
         float lengthFloat = atof(length);
         int rounded = (int)(lengthFloat < 0 ? (lengthFloat - 0.5) : (lengthFloat + 0.5));
 
         if (0 == strcmp(exists, "t")) {
+          PQclear(res);
+
           snprintf(command, sizeof(command), "SELECT \"array\" FROM guild_queue WHERE guild_id = %"PRIu64";", message->guild_id);
 
           res = PQexec(conn, command);
@@ -788,8 +788,6 @@ void on_message(struct discord *client, const struct discord_message *message) {
           if (!resultCode) return;
 
           char *arrQueue = PQgetvalue(res, 0, 0);
-
-          PQclear(res);
 
           jsmn_parser parser;
           jsmntok_t tokens[1024];
@@ -812,6 +810,8 @@ void on_message(struct discord *client, const struct discord_message *message) {
             log_error("[jsmn-find] Failed to load jsmn-find.");
             return;
           }
+
+          PQclear(res);
 
           jsonb b;
           char qbuf[1024];
@@ -885,6 +885,8 @@ void on_message(struct discord *client, const struct discord_message *message) {
 
           discord_create_message(client, message->channel_id, &params, NULL);
         } else {
+          PQclear(res);
+
           char pJ[1024];
           snprintf(pJ, sizeof(pJ), "{\"op\":\"play\",\"guildId\":\"%"PRIu64"\",\"track\":\"%s\",\"noReplace\":false,\"pause\":false}", message->guild_id, track);
 
@@ -914,6 +916,31 @@ void on_message(struct discord *client, const struct discord_message *message) {
           res = PQexec(conn, command);
 
           resultCode = _PQresultStatus(conn, res, "inserting records into guild_queue table", "Successfully inserted records into the guild_queue table.");
+          if (!resultCode) return;
+
+          PQclear(res);
+
+          res = PQexec(conn, "CREATE TABLE IF NOT EXISTS guild_channels(guild_id BIGINT UNIQUE NOT NULL, channel_id BIGINT UNIQUE NOT NULL);");
+
+          resultCode = _PQresultStatus(conn, res, "creating guild_channels table", NULL);
+          if (!resultCode) return;
+
+          PQclear(res);
+
+          snprintf(command, sizeof(command), "DELETE FROM guild_channels WHERE guild_id = %"PRIu64";", message->guild_id);
+
+          res = PQexec(conn, command);
+
+          resultCode = _PQresultStatus(conn, res, "deleting guild_channels where guild_id matches the guild's Id", "Successfully deleted guild_channels table where guild_id = Message Guild ID.");
+          if (!resultCode) return;
+
+          PQclear(res);
+
+          snprintf(command, sizeof(command), "INSERT INTO guild_channels(guild_id, channel_id) values(%"PRIu64", %"PRIu64");", message->guild_id, message->channel_id);
+
+          res = PQexec(conn, command);
+
+          resultCode = _PQresultStatus(conn, res, "inserting records into guild_voice table", "Successfully inserted records into the guild_channels table.");
           if (!resultCode) return;
 
           PQclear(res);
@@ -954,31 +981,6 @@ void on_message(struct discord *client, const struct discord_message *message) {
 
           discord_create_message(client, message->channel_id, &params, NULL);
         }
-
-        res = PQexec(conn, "CREATE TABLE IF NOT EXISTS guild_channels(guild_id BIGINT UNIQUE NOT NULL, channel_id BIGINT UNIQUE NOT NULL);");
-
-        resultCode = _PQresultStatus(conn, res, "creating guild_channels table", NULL);
-        if (!resultCode) return;
-
-        PQclear(res);
-
-        snprintf(command, sizeof(command), "DELETE FROM guild_channels WHERE guild_id = %"PRIu64";", message->guild_id);
-
-        res = PQexec(conn, command);
-
-        resultCode = _PQresultStatus(conn, res, "deleting guild_channels where guild_id matches the guild's Id", "Successfully deleted guild_channels table where guild_id = Message Guild ID.");
-        if (!resultCode) return;
-
-        PQclear(res);
-
-        snprintf(command, sizeof(command), "INSERT INTO guild_channels(guild_id, channel_id) values(%"PRIu64", %"PRIu64");", message->guild_id, message->channel_id);
-
-        res = PQexec(conn, command);
-
-        resultCode = _PQresultStatus(conn, res, "inserting records into guild_voice table", "Successfully inserted records into the guild_channels table.");
-        if (!resultCode) return;
-
-        PQclear(res);
 
         PQfinish(conn);
       }

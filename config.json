@@ -17,5 +17,8 @@
   "lavalink": {
     "hostname": "YOUR-LAVALINK-NODE-HOSTNAME",
     "password": "YOUR-LAVALINK-NODE-PASSWORD"
+  },
+  "postgresql": {
+    "connInfo": "host=POSTGRESQL-HOSTNAME port=5432 dbname=POSTGRESQL-DBNAME user=POSTGRESQL-USER-NAME password=POSTGRESQL-PASSWORD"
   }
 }

@@ -5,7 +5,7 @@ EXECUTABLE_FILE_NAME := ./ConcordBot
 
 DFLAGS := -Ofast
 CFLAGS := -Wall -Wextra -Wpedantic -Ofast
-LDFLAGS := -ldiscord -lcurl -lsqlite3 -pthread -I /usr/include/postgresql -lpq
+LDFLAGS := -std=gnu99 -ldiscord -lcurl -lsqlite3 -pthread -I /usr/include/postgresql -lpq
 
 all:
 	$(CC) $(CFLAGS) -o $(EXECUTABLE_FILE_NAME) $(MAIN) $^ $(LDFLAGS)

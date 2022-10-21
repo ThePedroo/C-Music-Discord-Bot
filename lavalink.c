@@ -42,7 +42,7 @@ void on_text(void *data, struct websockets *ws, struct ws_info *info, const char
   int r = jsmn_parse(&parser, text, len, tokens, sizeof(tokens));
 
   if (r < 0) {
-    log_error("[JSMNF] Failed to parse JSON.");
+    log_error("[jsmn-find] Failed to parse JSON.");
     return;
   }
 
@@ -53,14 +53,14 @@ void on_text(void *data, struct websockets *ws, struct ws_info *info, const char
   r = jsmnf_load(&loader, text, tokens, parser.toknext, pairs, 1024);
 
   if (r < 0) {
-    log_error("[JSMNF] Failed to load JSMNF.");
+    log_error("[jsmn-find] Failed to load jsmn-find.");
     return;
   }
 
   jsmnf_pair *op = jsmnf_find(pairs, text, "op", 2);
 
   if (!op) {
-    log_error("[JSMNF] Failed to find op.");
+    log_error("[jsmn-find] Failed to find op.");
     return;
   }
 
@@ -71,7 +71,7 @@ void on_text(void *data, struct websockets *ws, struct ws_info *info, const char
     jsmnf_pair *type = jsmnf_find(pairs, text, "type", 4);
 
     if (!type) {
-      log_error("[JSMNF] Failed to find type.");
+      log_error("[jsmn-find] Failed to find type.");
       return;
     }
 
@@ -81,13 +81,13 @@ void on_text(void *data, struct websockets *ws, struct ws_info *info, const char
     if (0 == strcmp(Type, "TrackEndEvent")) {
       jsmnf_pair *guildId = jsmnf_find(pairs, text, "guildId", 7);
 
-      PGconn *conn = connectDB();
+      PGconn *conn = connectDB(data);
       if (!conn) return;
 
       char command[2048];
       snprintf(command, sizeof(command), "SELECT channel_id FROM guild_channels WHERE guild_id = %.*s;", (int)guildId->v.len, text + guildId->v.pos);
 
-      PGresult *res = _PQexec(conn, command);
+      PGresult *res = PQexec(conn, command);
 
       int resultCode = _PQresultStatus(conn, res, "trying to retrieve the channel_id", NULL);
       if (!resultCode) return;
@@ -98,23 +98,21 @@ void on_text(void *data, struct websockets *ws, struct ws_info *info, const char
 
       snprintf(command, sizeof(command), "SELECT \"array\" FROM guild_queue WHERE guild_id = %.*s;", (int)guildId->v.len, text + guildId->v.pos);
 
-      res = _PQexec(conn, command);
+      res = PQexec(conn, command);
 
       resultCode = _PQresultStatus(conn, res, "trying to retrieve the array", NULL);
       if (!resultCode) return;
 
-      char *array = PQgetvalue(res, 0, 0);
-
-      PQclear(res);
+      char *arrQueue = PQgetvalue(res, 0, 0);
 
       jsmn_parser parser;
       jsmntok_t tokens[1024];
 
       jsmn_init(&parser);
-      int r = jsmn_parse(&parser, array, strlen(array), tokens, sizeof(tokens));
+      int r = jsmn_parse(&parser, arrQueue, strlen(arrQueue), tokens, sizeof(tokens));
 
       if (r < 0) {
-        log_error("[JSMNF] Failed to parse JSON.");
+        log_error("[jsmn-find] Failed to parse JSON.");
         return;
       }
 
@@ -122,19 +120,12 @@ void on_text(void *data, struct websockets *ws, struct ws_info *info, const char
       jsmnf_pair pairs[1024];
 
       jsmnf_init(&loader);
-      r = jsmnf_load(&loader, array, tokens, parser.toknext, pairs, 1024);
+      r = jsmnf_load(&loader, arrQueue, tokens, parser.toknext, pairs, 1024);
 
       if (r < 0) {
-        log_error("[JSMNF] Failed to load JSMNF.");
+        log_error("[jsmn-find] Failed to load jsmn-find.");
         return;
       }
-
-      jsmnf_pair *nTrack = &pairs->fields[1];
-
-      char pJ[1024];
-      snprintf(pJ, sizeof(pJ), "{\"op\":\"play\",\"guildId\":\"%.*s\",\"track\":\"%.*s\",\"noReplace\":false,\"pause\":false}", (int)guildId->v.len, text + guildId->v.pos, (int)nTrack->v.len, array + nTrack->v.pos);
-
-      sendPayload(pJ, "play");
 
       jsonb b;
       char qbuf[1024];
@@ -142,19 +133,12 @@ void on_text(void *data, struct websockets *ws, struct ws_info *info, const char
       jsonb_init(&b);
       jsonb_array(&b, qbuf, sizeof(qbuf));
 
-      snprintf(command, sizeof(command), "DELETE FROM guild_voice WHERE guild_id = %.*s;", (int)guildId->v.len, text + guildId->v.pos);
-
-      res = _PQexec(conn, command);
-
-      resultCode = _PQresultStatus(conn, res, "deleting guild_voice table where guild_id matches the guild's Id", "Successfully deleted guild_voice table from guild_id = Guild ID.");
-      if (!resultCode) return;
-
-      PQclear(res);
-
       if (pairs->size == 1) {
+        PQclear(res);
+
         snprintf(command, sizeof(command), "DELETE FROM guild_queue WHERE guild_id = %.*s;", (int)guildId->v.len, text + guildId->v.pos);
 
-        res = _PQexec(conn, command);
+        res = PQexec(conn, command);
 
         int resultCode = _PQresultStatus(conn, res, "deleting guild_queue table where guild_id matches the guild's Id", "Successfully deleted guild_queue table from guild_id = Guild ID.");
         if (!resultCode) return;
@@ -163,18 +147,18 @@ void on_text(void *data, struct websockets *ws, struct ws_info *info, const char
 
         snprintf(command, sizeof(command), "DELETE FROM guild_channels WHERE guild_id = %.*s;", (int)guildId->v.len, text + guildId->v.pos);
 
-        res = _PQexec(conn, command);
+        res = PQexec(conn, command);
 
-        resultCode = _PQresultStatus(conn, res, "deleting guild_queue table where guild_id matches the guild's Id", "Successfully deleted guild_queue table from guild_id = Guild ID.");
+        resultCode = _PQresultStatus(conn, res, "deleting guild_channels table where guild_id matches the guild's Id", "Successfully deleted guild_channels table from guild_id = Guild ID.");
         if (!resultCode) return;
 
         PQclear(res);
 
         snprintf(command, sizeof(command), "DELETE FROM guild_voice WHERE guild_id = %.*s;", (int)guildId->v.len, text + guildId->v.pos);
 
-        res = _PQexec(conn, command);
+        res = PQexec(conn, command);
 
-        resultCode = _PQresultStatus(conn, res, "deleting guild_queue table where guild_id matches the guild's Id", "Successfully deleted guild_queue table from guild_id = Guild ID.");
+        resultCode = _PQresultStatus(conn, res, "deleting guild_voice table where guild_id matches the guild's Id", "Successfully deleted guild_voice table from guild_id = Guild ID.");
         if (!resultCode) return;
 
         PQclear(res);
@@ -208,13 +192,17 @@ void on_text(void *data, struct websockets *ws, struct ws_info *info, const char
         discord_create_message(data, channelID, &params, NULL);
         return;
       }
+      jsmnf_pair *f = &pairs->fields[1];
 
-      jsmnf_pair *f;
+      char pJ[512];
+      snprintf(pJ, sizeof(pJ), "{\"op\":\"play\",\"guildId\":\"%.*s\",\"track\":\"%.*s\"}", (int)guildId->v.len, text + guildId->v.pos, (int)f->v.len, arrQueue + f->v.pos);
+
+      PQclear(res);
 
       for (int i = 1; i < pairs->size; ++i) {
         f = &pairs->fields[i];
         char arrayTrack[256];
-        snprintf(arrayTrack, sizeof(arrayTrack), "%.*s", (int)f->v.len, array + f->v.pos);
+        snprintf(arrayTrack, sizeof(arrayTrack), "%.*s", (int)f->v.len, arrQueue + f->v.pos);
         jsonb_string(&b, qbuf, sizeof(qbuf), arrayTrack, strlen(arrayTrack));
       }
 
@@ -222,7 +210,7 @@ void on_text(void *data, struct websockets *ws, struct ws_info *info, const char
 
       snprintf(command, sizeof(command), "DELETE FROM guild_queue WHERE guild_id = %.*s;", (int)guildId->v.len, text + guildId->v.pos);
 
-      res = _PQexec(conn, command);
+      res = PQexec(conn, command);
 
       resultCode = _PQresultStatus(conn, res, "deleting guild_queue table where guild_id matches the guild's Id", "Successfully deleted guild_queue table from guild_id = Guild ID.");
       if (!resultCode) return;
@@ -231,7 +219,7 @@ void on_text(void *data, struct websockets *ws, struct ws_info *info, const char
 
       snprintf(command, sizeof(command), "INSERT INTO guild_queue(guild_id, \"array\") values(%.*s, '%s');", (int)guildId->v.len, text + guildId->v.pos, qbuf);
 
-      res = _PQexec(conn, command);
+      res = PQexec(conn, command);
 
       resultCode = _PQresultStatus(conn, res, "inserting records into guild_queue table", "Successfully inserted records into the guild_queue table.");
       if (!resultCode) return;
@@ -276,15 +264,8 @@ void on_text(void *data, struct websockets *ws, struct ws_info *info, const char
 enum discord_event_scheduler scheduler(struct discord *client, const char data[], size_t size, enum discord_gateway_events event) {
   switch (event) {
     case DISCORD_EV_VOICE_STATE_UPDATE: {
-      PGconn *conn = connectDB();
+      PGconn *conn = connectDB(client);
       if (!conn) return DISCORD_EVENT_IGNORE;
-
-      PGresult *res = _PQexec(conn, "CREATE TABLE IF NOT EXISTS user_voice(user_id BIGINT UNIQUE NOT NULL, voice_channel_id BIGINT NOT NULL);");
-
-      int resultCode = _PQresultStatus(conn, res, "creating user_voice table", NULL);
-      if (!resultCode) return DISCORD_EVENT_IGNORE;
-
-      PQclear(res);
 
       jsmn_parser parser;
       jsmntok_t tokens[256];
@@ -293,7 +274,7 @@ enum discord_event_scheduler scheduler(struct discord *client, const char data[]
       int r = jsmn_parse(&parser, data, size, tokens, sizeof(tokens));
 
       if (r < 0) {
-        log_error("[JSMNF] Failed to parse JSON.");
+        log_error("[jsmn-find] Failed to parse JSON.");
         PQfinish(conn);
         return DISCORD_EVENT_IGNORE;
       }
@@ -305,7 +286,7 @@ enum discord_event_scheduler scheduler(struct discord *client, const char data[]
       r = jsmnf_load(&loader, data, tokens, parser.toknext, pairs, 128);
 
       if (r < 0) {
-        log_error("[JSMNF] Failed to load JSMNF.");
+        log_error("[jsmn-find] Failed to load jsmn-find.");
         PQfinish(conn);
         return DISCORD_EVENT_IGNORE;
       }
@@ -313,7 +294,7 @@ enum discord_event_scheduler scheduler(struct discord *client, const char data[]
       jsmnf_pair *VGI = jsmnf_find(pairs, data, "guild_id", 8);
 
       if (!VGI) {
-        log_error("[JSMNF] Failed to find guild_id.");
+        log_error("[jsmn-find] Failed to find guild_id.");
         PQfinish(conn);
         return DISCORD_EVENT_IGNORE;
       }
@@ -321,7 +302,7 @@ enum discord_event_scheduler scheduler(struct discord *client, const char data[]
       jsmnf_pair *VUI = jsmnf_find(pairs, data, "user_id", 7);
 
       if (!VUI) {
-        log_error("[JSMNF] Failed to find user_id.");
+        log_error("[jsmn-find] Failed to find user_id.");
         PQfinish(conn);
         return DISCORD_EVENT_IGNORE;
       }
@@ -339,7 +320,7 @@ enum discord_event_scheduler scheduler(struct discord *client, const char data[]
       char channel_id[32];
 
       if (!VCI) {
-        log_error("[JSMNF] Failed to find channel_id.");
+        log_error("[jsmn-find] Failed to find channel_id.");
         PQfinish(conn);
         return DISCORD_EVENT_IGNORE;
       } else {  
@@ -351,7 +332,7 @@ enum discord_event_scheduler scheduler(struct discord *client, const char data[]
           char command[128];
           snprintf(command, sizeof(command), "DELETE FROM guild_voice WHERE guild_id = %.*s;", (int)VGI->v.len, data + VGI->v.pos);
 
-          res = _PQexec(conn, command);
+          PGresult *res = PQexec(conn, command);
 
           int resultCode = _PQresultStatus(conn, res, "deleting guild_voice table where guild_id matches the guild's Id", "Successfully deleted guild_voice table from guild_id = Voice Channel Guild ID.");
           if (!resultCode) return DISCORD_EVENT_IGNORE;
@@ -363,14 +344,21 @@ enum discord_event_scheduler scheduler(struct discord *client, const char data[]
         }
 
         if (0 == strcmp(channel_id, "null")) {
+          PGresult *res = PQexec(conn, "CREATE TABLE IF NOT EXISTS user_voice(user_id BIGINT UNIQUE NOT NULL, voice_channel_id BIGINT NOT NULL);");
+
+          int resultCode = _PQresultStatus(conn, res, "creating user_voice table", NULL);
+          if (!resultCode) return DISCORD_EVENT_IGNORE;
+
+          PQclear(res);
+
           log_debug("[SYSTEM] Someone left a voice channel, deleting user_voice table from the user if exists.");
 
           char command[128];
           snprintf(command, sizeof(command), "DELETE FROM user_voice WHERE user_id = %.*s;", (int)VUI->v.len, data + VUI->v.pos);
 
-          res = _PQexec(conn, command);
+          res = PQexec(conn, command);
 
-          int resultCode = _PQresultStatus(conn, res, "deleting user_voice table where user_id matches the user's Id", "Successfully deleted user_voice table from user_id = Voice Channel User ID.");
+          resultCode = _PQresultStatus(conn, res, "deleting user_voice table where user_id matches the user's Id", "Successfully deleted user_voice table from user_id = Voice Channel User ID.");
           if (!resultCode) return DISCORD_EVENT_IGNORE;
   
           PQclear(res);
@@ -383,7 +371,7 @@ enum discord_event_scheduler scheduler(struct discord *client, const char data[]
       jsmnf_pair *SSI = jsmnf_find(pairs, data, "session_id", 10);
 
       if (!SSI) {
-        log_error("[JSMNF] Failed to find session_id.");
+        log_error("[jsmn-find] Failed to find session_id.");
         PQfinish(conn);
         return DISCORD_EVENT_IGNORE;
       }
@@ -391,7 +379,7 @@ enum discord_event_scheduler scheduler(struct discord *client, const char data[]
       if (0 == strcmp(userID, botID)) {
         log_debug("[SYSTEM] The bot joined the voice channel. Going to save its session_id.");
 
-        res = _PQexec(conn, "CREATE TABLE IF NOT EXISTS guild_voice(guild_id BIGINT UNIQUE NOT NULL, voice_channel_id BIGINT UNIQUE NOT NULL, session_id TEXT UNIQUE NOT NULL);");
+        PGresult *res = PQexec(conn, "CREATE TABLE IF NOT EXISTS guild_voice(guild_id BIGINT UNIQUE NOT NULL, voice_channel_id BIGINT UNIQUE NOT NULL, session_id TEXT UNIQUE NOT NULL);");
 
         int resultCode = _PQresultStatus(conn, res, "creating table guild_voice", NULL);
         if (!resultCode) return DISCORD_EVENT_IGNORE;
@@ -401,7 +389,7 @@ enum discord_event_scheduler scheduler(struct discord *client, const char data[]
         char command[256];
         snprintf(command, sizeof(command), "DELETE FROM guild_voice WHERE guild_id = %.*s;", (int)VGI->v.len, data + VGI->v.pos);
 
-        res = _PQexec(conn, command);
+        res = PQexec(conn, command);
 
         resultCode = _PQresultStatus(conn, res, "deleting guild_voice table where guild_id matches the guild's Id", "Deleted guild_voice where guild_id = Voice Channel Guild ID.");
         if (!resultCode) return DISCORD_EVENT_IGNORE;
@@ -410,7 +398,7 @@ enum discord_event_scheduler scheduler(struct discord *client, const char data[]
 
         snprintf(command, sizeof(command), "INSERT INTO guild_voice(guild_id, voice_channel_id, session_id) values(%.*s, %.*s, \'%.*s\');", (int)VGI->v.len, data + VGI->v.pos, (int)VCI->v.len, data + VCI->v.pos, (int)SSI->v.len, data + SSI->v.pos);
 
-        res = _PQexec(conn, command);
+        res = PQexec(conn, command);
 
         resultCode = _PQresultStatus(conn, res, "inserting records into guild_voice table", "Successfully inserted records into the guild_voice table.");
         if (!resultCode) return DISCORD_EVENT_IGNORE;
@@ -424,19 +412,26 @@ enum discord_event_scheduler scheduler(struct discord *client, const char data[]
       if (VCI) {
         log_debug("[SYSTEM] Voice channel found, adding all informations into database. [guild_id: %.*s, user_id: %.*s, voice_channel_id: %.*s]", (int)VGI->v.len, data + VGI->v.pos, (int)VUI->v.len, data + VUI->v.pos, (int)VCI->v.len, data + VCI->v.pos);
 
+        PGresult *res = PQexec(conn, "CREATE TABLE IF NOT EXISTS user_voice(user_id BIGINT UNIQUE NOT NULL, voice_channel_id BIGINT NOT NULL);");
+
+        int resultCode = _PQresultStatus(conn, res, "creating user_voice table", NULL);
+        if (!resultCode) return DISCORD_EVENT_IGNORE;
+
+        PQclear(res);
+
         char command[256];
         snprintf(command, sizeof(command), "DELETE FROM user_voice WHERE user_id = %.*s;", (int)VUI->v.len, data + VUI->v.pos);
 
-        res = _PQexec(conn, command);
+        res = PQexec(conn, command);
 
-        int resultCode = _PQresultStatus(conn, res, "deleting user_voice table where user_id matches the users's Id", "Successfully deleted user_voice table from user_id = Voice Channel User ID.");
+        resultCode = _PQresultStatus(conn, res, "deleting user_voice table where user_id matches the users's Id", "Successfully deleted user_voice table from user_id = Voice Channel User ID.");
         if (!resultCode) return DISCORD_EVENT_IGNORE;
 
         PQclear(res);
 
         snprintf(command, sizeof(command), "INSERT INTO user_voice(user_id, voice_channel_id) values(%.*s, %.*s);",(int)VUI->v.len, data + VUI->v.pos, (int)VCI->v.len, data + VCI->v.pos);
 
-        res = _PQexec(conn, command);
+        res = PQexec(conn, command);
 
         resultCode = _PQresultStatus(conn, res, "inserting records into user_voice table", "Successfully inserted records into the user_voice table.");
         if (!resultCode) return DISCORD_EVENT_IGNORE;
@@ -445,13 +440,13 @@ enum discord_event_scheduler scheduler(struct discord *client, const char data[]
         PQfinish(conn);
 
       } else {
-        log_fatal("[JSMNF] Unable to find a VCI. [%s]", data);
+        log_fatal("[jsmn-find] Unable to find a VCI. [%s]", data);
         PQfinish(conn);
         return DISCORD_EVENT_IGNORE;
       }
     } return DISCORD_EVENT_IGNORE;
     case DISCORD_EV_VOICE_SERVER_UPDATE: {
-      PGconn *conn = connectDB();
+      PGconn *conn = connectDB(client);
       if (!conn) return DISCORD_EVENT_IGNORE;
 
       jsmn_parser parser;
@@ -461,7 +456,7 @@ enum discord_event_scheduler scheduler(struct discord *client, const char data[]
       int r = jsmn_parse(&parser, data, size, tokens, sizeof(tokens));
 
       if (r < 0) {
-        log_error("[JSMNF] Failed to parse JSON.");
+        log_error("[jsmn-find] Failed to parse JSON.");
         PQfinish(conn);
         return DISCORD_EVENT_IGNORE;
       }
@@ -473,7 +468,7 @@ enum discord_event_scheduler scheduler(struct discord *client, const char data[]
       r = jsmnf_load(&loader, data, tokens, parser.toknext, pairs, 128);
 
       if (r < 0) {
-        log_error("[JSMNF] Failed to load JSMNF.");
+        log_error("[jsmn-find] Failed to load jsmn-find.");
         PQfinish(conn);
         return DISCORD_EVENT_IGNORE;
       }
@@ -481,7 +476,7 @@ enum discord_event_scheduler scheduler(struct discord *client, const char data[]
       jsmnf_pair *VGI = jsmnf_find(pairs, data, "guild_id", 8);
 
       if (!VGI) {
-        log_error("[JSMNF] Failed to find guild_id.");
+        log_error("[jsmn-find] Failed to find guild_id.");
         PQfinish(conn);
         return DISCORD_EVENT_IGNORE;
       }
@@ -489,7 +484,7 @@ enum discord_event_scheduler scheduler(struct discord *client, const char data[]
       char command[128];
       snprintf(command, sizeof(command), "SELECT session_id FROM guild_voice WHERE guild_id = %.*s;", (int)VGI->v.len, data + VGI->v.pos);
 
-      PGresult *res = _PQexec(conn, command);
+      PGresult *res = PQexec(conn, command);
 
       int resultCode = _PQresultStatus(conn, res, "access guild_voice table", NULL);
       if (!resultCode) return DISCORD_EVENT_IGNORE;
@@ -518,8 +513,10 @@ void sendPayload(char payload[], char *payloadOP) {
   }
 }
 
-PGconn *connectDB(void) {
-  const char *connInfo = "host=/var/run/postgresql port=5432 dbname=postgres user=postgres sslmode=disable password=POSTGRESQL-PASSWORD";
+PGconn *connectDB(struct discord *client) {
+  char connInfo[512];
+  struct ccord_szbuf_readonly value = discord_config_get_field(client, (char *[2]){ "postgresql", "connInfo" }, 2);
+  snprintf(connInfo, sizeof(connInfo), "%.*s", (int)value.size, value.start);
 
   PGconn *conn = PQconnectdb(connInfo);
 
@@ -551,11 +548,6 @@ PGconn *connectDB(void) {
   }
 
   return conn;
-}
-
-PGresult *_PQexec(PGconn *conn, char *command) {
-  PGresult *res = PQexec(conn, command);
-  return res;
 }
 
 int _PQresultStatus(PGconn *conn, PGresult *res, char *action, char *msgDone) {

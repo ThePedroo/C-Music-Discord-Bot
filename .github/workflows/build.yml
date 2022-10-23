@@ -1,5 +1,9 @@
 name: Build
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+# Tests image build
+>>>>>>> b9db68c4634a9bdef9339dcde586fa34c650633c
 =======
 # Tests image build
 >>>>>>> b9db68c4634a9bdef9339dcde586fa34c650633c
@@ -11,11 +15,17 @@ on:
     branches: [ main ]
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
+=======
+>>>>>>> b9db68c4634a9bdef9339dcde586fa34c650633c
 # Environment variables available to all jobs and steps in this workflow
 env:
   IMAGE_TAG: groov-in-c
 
+<<<<<<< HEAD
+>>>>>>> b9db68c4634a9bdef9339dcde586fa34c650633c
+=======
 >>>>>>> b9db68c4634a9bdef9339dcde586fa34c650633c
 jobs:
   build:
@@ -26,8 +36,14 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v2
 <<<<<<< HEAD
+<<<<<<< HEAD
 
     - name: Build bot (x86_64)
+=======
+      
+    # Build
+    - name: Build bot
+>>>>>>> b9db68c4634a9bdef9339dcde586fa34c650633c
 =======
       
     # Build

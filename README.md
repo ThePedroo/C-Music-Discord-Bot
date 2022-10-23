@@ -29,7 +29,7 @@ Done, now you will have a compiled version of the music bot for your architectur
 
 ## Pre-compiled
 
-* 1 - Go to GitHub releases and download the pre-compiled file that matches your CPU architecture, after it runs it.
+* 1 - Go to GitHub releases and download the pre-compiled file that matches your CPU architecture, after it, run it.
 
 Done! Yeah, it's that simple to use it. ^^
 

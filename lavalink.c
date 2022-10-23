@@ -27,7 +27,7 @@ void on_close(void *data, struct websockets *ws, struct ws_info *info, enum ws_c
 }
 
 void on_cycle(struct discord *client) {
-  (void) *client;
+  (void) client;
   uint64_t tstamp;
   ws_easy_run(g_ws, 5, &tstamp);
 }
@@ -162,6 +162,7 @@ void on_text(void *data, struct websockets *ws, struct ws_info *info, const char
         if (!resultCode) return;
 
         PQclear(res);
+        PQfinish(conn);
 
         struct discord_embed embed[] = {
           {
@@ -197,14 +198,16 @@ void on_text(void *data, struct websockets *ws, struct ws_info *info, const char
       char pJ[512];
       snprintf(pJ, sizeof(pJ), "{\"op\":\"play\",\"guildId\":\"%.*s\",\"track\":\"%.*s\"}", (int)guildId->v.len, text + guildId->v.pos, (int)f->v.len, arrQueue + f->v.pos);
 
-      PQclear(res);
+      sendPayload(pJ, "play");
 
       for (int i = 1; i < pairs->size; ++i) {
         f = &pairs->fields[i];
         char arrayTrack[256];
-        snprintf(arrayTrack, sizeof(arrayTrack), "%.*s", (int)f->v.len, arrQueue + f->v.pos);
-        jsonb_string(&b, qbuf, sizeof(qbuf), arrayTrack, strlen(arrayTrack));
+        int arrTrackSize = snprintf(arrayTrack, sizeof(arrayTrack), "%.*s", (int)f->v.len, arrQueue + f->v.pos);
+        jsonb_string(&b, qbuf, sizeof(qbuf), arrayTrack, arrTrackSize);
       }
+
+      PQclear(res);
 
       jsonb_array_pop(&b, qbuf, sizeof(qbuf));
 
@@ -225,6 +228,7 @@ void on_text(void *data, struct websockets *ws, struct ws_info *info, const char
       if (!resultCode) return;
 
       PQclear(res);
+      PQfinish(conn);
 
       struct discord_embed embed[] = {
         {
@@ -253,8 +257,6 @@ void on_text(void *data, struct websockets *ws, struct ws_info *info, const char
       };
 
       discord_create_message(data, channelID, &params, NULL);
-
-      PQfinish(conn);
     }
   }
 }

@@ -618,9 +618,9 @@ void on_message(struct discord *client, const struct discord_message *message) {
       }
 
       char lavaURL[1024];
-      snprintf(lavaURL, sizeof(lavaURL), "https://%s/loadtracks?identifier=", lavaHostname);
+      snprintf(lavaURL, sizeof(lavaURL), "http://%s/loadtracks?identifier=", lavaHostname);
 
-      if (0 == strncmp(music, "https://", strlen("https://"))) {
+      if (0 == strncmp(music, "https://", 8)) {
         strncat(lavaURL, musicSearchEncoded, sizeof(lavaURL) - 1);
       } else {
         strncat(lavaURL, "ytsearch:", sizeof(lavaURL) - 1);
@@ -811,8 +811,6 @@ void on_message(struct discord *client, const struct discord_message *message) {
             return;
           }
 
-          PQclear(res);
-
           jsonb b;
           char qbuf[1024];
 
@@ -824,9 +822,12 @@ void on_message(struct discord *client, const struct discord_message *message) {
           for (int i = 0; i < pairs->size; ++i) {
             f = &pairs->fields[i];
             char arrayTrack[256];
-            snprintf(arrayTrack, sizeof(arrayTrack), "%.*s", (int)f->v.len, arrQueue + f->v.pos);
-            jsonb_string(&b, qbuf, sizeof(qbuf), arrayTrack, strlen(arrayTrack));
+            int arrTrackSize = snprintf(arrayTrack, sizeof(arrayTrack), "%.*s", (int)f->v.len, arrQueue + f->v.pos);
+            jsonb_string(&b, qbuf, sizeof(qbuf), arrayTrack, arrTrackSize);
           }
+
+          PQclear(res);
+
           jsonb_string(&b, qbuf, sizeof(qbuf), track, strlen(track));
 
           jsonb_array_pop(&b, qbuf, sizeof(qbuf));
@@ -948,7 +949,7 @@ void on_message(struct discord *client, const struct discord_message *message) {
           if ((rounded / 1000) % 60 > 10) {
             snprintf(descriptionEmbed, sizeof(descriptionEmbed), "Ok, playing the song NOW!\n:person_tipping_hand: | Author: `%s`\n:musical_note: | Name: `%s`\n:stopwatch:  | Time: `%d:%d`", author, title, ((int)(lengthFloat < 0 ? (lengthFloat - 0.5) : (lengthFloat + 0.5)) / 1000 / 60) << 0, (rounded / 1000) % 60);
           } else {
-            snprintf(descriptionEmbed, sizeof(descriptionEmbed), "Ok, playing the song NOW!!\n:person_tipping_hand:  | Author: `%s`\n:musical_note: | Name: `%s`\n:stopwatch:  | Time: `%d:0%d`", author, title, ((int)(lengthFloat < 0 ? (lengthFloat - 0.5) : (lengthFloat + 0.5)) / 1000 / 60) << 0, (rounded / 1000) % 60);
+            snprintf(descriptionEmbed, sizeof(descriptionEmbed), "Ok, playing the song NOW!\n:person_tipping_hand:  | Author: `%s`\n:musical_note: | Name: `%s`\n:stopwatch:  | Time: `%d:0%d`", author, title, ((int)(lengthFloat < 0 ? (lengthFloat - 0.5) : (lengthFloat + 0.5)) / 1000 / 60) << 0, (rounded / 1000) % 60);
           }
 
           struct discord_embed embed[] = {
@@ -1019,7 +1020,7 @@ void on_message(struct discord *client, const struct discord_message *message) {
 }
 
 int main (void) {
-  struct discord *client = discord_config_init("config.json");
+  struct discord *client = discord_config_init("config.json"); // MEMORY LEAK (2)
 
   // WEBSOCKET
 
@@ -1031,7 +1032,7 @@ int main (void) {
   };
 
   CURLM *mhandle = curl_multi_init();
-  g_ws = ws_init(&cbs, mhandle, NULL);
+  g_ws = ws_init(&cbs, mhandle, NULL); // MEMORY LEAK (2)
 
   struct ccord_szbuf_readonly value = discord_config_get_field(client, (char *[2]){ "lavalink", "hostname" }, 2);
   snprintf(lavaHostname, sizeof(lavaHostname), "%.*s", (int)value.size, value.start);

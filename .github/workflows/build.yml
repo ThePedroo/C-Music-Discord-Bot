@@ -1,5 +1,8 @@
-name: Docker Build
+name: Build
+<<<<<<< HEAD
+=======
 # Tests image build
+>>>>>>> b9db68c4634a9bdef9339dcde586fa34c650633c
 
 on:
   push:
@@ -7,11 +10,13 @@ on:
   pull_request:
     branches: [ main ]
 
+<<<<<<< HEAD
+=======
 # Environment variables available to all jobs and steps in this workflow
 env:
   IMAGE_TAG: groov-in-c
 
-
+>>>>>>> b9db68c4634a9bdef9339dcde586fa34c650633c
 jobs:
   build:
     name: Build
@@ -20,12 +25,15 @@ jobs:
 
     - name: Checkout
       uses: actions/checkout@v2
+<<<<<<< HEAD
+
+    - name: Build bot (x86_64)
+=======
       
     # Build
-    - name: Build Docker image
-      run: |        
-        docker build -t ${IMAGE_TAG}:${GITHUB_SHA} .
-        
+    - name: Build bot
+>>>>>>> b9db68c4634a9bdef9339dcde586fa34c650633c
+      run: chmod +x ./build.sh && ./build.sh
 
     - name: Upload Artifacts
       uses: actions/upload-artifact@v3

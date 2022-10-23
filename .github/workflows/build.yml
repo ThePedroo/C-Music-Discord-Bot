@@ -1,4 +1,4 @@
-name: Docker Build
+name: Build
 # Tests image build
 
 on:
@@ -11,7 +11,6 @@ on:
 env:
   IMAGE_TAG: groov-in-c
 
-
 jobs:
   build:
     name: Build
@@ -22,10 +21,8 @@ jobs:
       uses: actions/checkout@v2
       
     # Build
-    - name: Build Docker image
-      run: |        
-        docker build -t ${IMAGE_TAG}:${GITHUB_SHA} .
-        
+    - name: Build bot
+      run: chmod +x ./build.sh && ./build.sh
 
     - name: Upload Artifacts
       uses: actions/upload-artifact@v3

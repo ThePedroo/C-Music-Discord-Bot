@@ -1,15 +1,10 @@
 name: Build
-# Tests image build
 
 on:
   push:
     branches: [ main ]
   pull_request:
     branches: [ main ]
-
-# Environment variables available to all jobs and steps in this workflow
-env:
-  IMAGE_TAG: groov-in-c
 
 jobs:
   build:
@@ -19,9 +14,8 @@ jobs:
 
     - name: Checkout
       uses: actions/checkout@v2
-      
-    # Build
-    - name: Build bot
+
+    - name: Build bot (x86_64)
       run: chmod +x ./build.sh && ./build.sh
 
     - name: Upload Artifacts

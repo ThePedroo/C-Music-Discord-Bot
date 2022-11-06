@@ -9,12 +9,11 @@
 #include <concord/discord.h>
 #include <concord/discord-internal.h> // All ws functions related
 
-#include <sqlite3.h> // Sqlite3 (db)
 #include <libpq-fe.h>
 
-#include "lavalink.c"
+#include "lavalink.h"
 
-char lavaHostname[128]; char lavaPasswd[128]; char botID[32];
+char lavaHostname[128], lavaPasswd[128], botID[32];
 
 struct memory {
   char *body;
@@ -27,7 +26,7 @@ static size_t WriteMemoryCallback(void *contents, size_t size, size_t nmemb, voi
 
   char *ptr = realloc(mem->body, mem->size + realsize + 1);
   if (!ptr) {
-    log_fatal("[SYSTEM] Not enough memory to realloc.\n");
+    perror("[SYSTEM] Not enough memory to realloc.\n");
     return 0;
   }
 
@@ -618,7 +617,7 @@ void on_message(struct discord *client, const struct discord_message *message) {
       }
 
       char lavaURL[1024];
-      snprintf(lavaURL, sizeof(lavaURL), "http://%s/loadtracks?identifier=", lavaHostname);
+      snprintf(lavaURL, sizeof(lavaURL), "https://%s/loadtracks?identifier=", lavaHostname);
 
       if (0 == strncmp(music, "https://", 8)) {
         strncat(lavaURL, musicSearchEncoded, sizeof(lavaURL) - 1);
@@ -986,9 +985,12 @@ void on_message(struct discord *client, const struct discord_message *message) {
         PQfinish(conn);
       }
     } else {
+      PQclear(res);
+      PQfinish(conn);
+
       struct discord_embed embed[] = {
         {
-          .description = "<a:Noo:757568484086382622> | You are not in a voice channel.",
+          .description = "You are not in a voice channel.",
           .image =
             &(struct discord_embed_image){
               .url = "https://raw.githubusercontent.com/Cogmasters/concord/master/docs/static/social-preview.png",
@@ -1019,7 +1021,7 @@ void on_message(struct discord *client, const struct discord_message *message) {
   }
 }
 
-int main (void) {
+int main(void) {
   struct discord *client = discord_config_init("config.json"); // MEMORY LEAK (2)
 
   // WEBSOCKET
@@ -1068,6 +1070,7 @@ int main (void) {
 
   discord_run(client);
 
+  discord_cleanup(client);
   ws_end(g_ws);
   ws_cleanup(g_ws);
   curl_multi_cleanup(mhandle);

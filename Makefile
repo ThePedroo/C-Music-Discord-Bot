@@ -1,6 +1,6 @@
 CC ?= clang
 
-MAIN := main.c
+MAIN := main.c lavalink.c
 EXECUTABLE_FILE_NAME := ./ConcordBot
 
 DFLAGS := -Ofast

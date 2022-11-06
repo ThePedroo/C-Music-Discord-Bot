@@ -1,12 +1,5 @@
-#ifndef ADD_H
-#define ADD_H
-
-#include <stdio.h>
-
-#include <concord/discord.h>
-#include <concord/discord-internal.h> // All ws functions related
-
-#include <libpq-fe.h>
+#ifndef LAVALINK_H
+#define LAVALINK_H
 
 static struct websockets *g_ws;
 

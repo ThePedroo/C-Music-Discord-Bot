@@ -1,5 +1,3 @@
-#include "lavalink.h"
-
 #include <stdio.h>
 #include <string.h>
 
@@ -9,10 +7,12 @@
 #include <concord/jsmn.h> // Jsmnf functions
 #include <concord/jsmn-find.h> // Jsmnf functions
 
-#include <sqlite3.h> // Sqlite3 (db)
-#include <libpq-fe.h>
+#include <libpq-fe.h> // PostgreSQL
+
+#include "lavalink.h"
 
 static struct websockets *g_ws;
+uint64_t tstamp;
 
 // WEBSOCKET CALLBACKS
 
@@ -28,7 +28,6 @@ void on_close(void *data, struct websockets *ws, struct ws_info *info, enum ws_c
 
 void on_cycle(struct discord *client) {
   (void) client;
-  uint64_t tstamp;
   ws_easy_run(g_ws, 5, &tstamp);
 }
 
@@ -498,6 +497,8 @@ enum discord_event_scheduler scheduler(struct discord *client, const char data[]
 
       sendPayload(VUP, "voiceUpdate");
 
+     // on_cycle(client);
+
       PQclear(res);
       PQfinish(conn);
     } return DISCORD_EVENT_IGNORE;
@@ -512,6 +513,7 @@ void sendPayload(char payload[], char *payloadOP) {
     return;
   } else {
     log_debug("[LIBCURL] Sucessfully sent a payload with op %s to Lavalink.", payloadOP);
+    ws_easy_run(g_ws, 5, &tstamp);
   }
 }
 

@@ -2,6 +2,10 @@
 
 A lightweight music Discord bot using Concord.
 
+## Warning!
+
+This project is no longer mantained, as it was replaced by [Coglink](https://github.com/PerformanC/Coglink) 
+
 ## How to download and use it?
 
 There are currently two ways of using it. Compiling the source code and using it, or using the pre-compiled version
